@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const xmlHeaders = { "content-type": "application/xml", "access-control-allow-origin": "*" };
-const organization = '<organization><id>1</id><name>Browser Test</name><coordinates><x>1</x><y>417</y></coordinates><creationDate>2026-09-12T10:30:00</creationDate><annualTurnover>1</annualTurnover><type>PUBLIC</type></organization>';
+const organization = '<organization><id>1</id><name>Browser Test</name><coordinates><x>1</x><y>42</y></coordinates><creationDate>2026-09-12</creationDate><annualTurnover>1.5</annualTurnover><type>PUBLIC</type></organization>';
 
 async function openOperation(page, id) {
   const block = page.locator(`.opblock[id$="-${id}"]`);
@@ -24,13 +24,13 @@ test("all operations and local assets render under a Helios-style path", async (
   });
   page.on("request", request => origins.add(new URL(request.url()).origin));
   await page.goto("/~student/soa-lab1/");
-  await expect(page.locator(".opblock")).toHaveCount(13);
-  await expect(page.getByRole("heading", { name: /Organization Services/ })).toBeVisible();
+  await expect(page.locator(".opblock")).toHaveCount(12);
+  await expect(page.getByRole("heading", { name: /Управление организациями/ })).toBeVisible();
   await expect(page.locator(".errors-wrapper")).toHaveCount(0);
   await noOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("overview.png"), fullPage: true });
   const block = await openOperation(page, "managerAcquireOrganization");
-  await expect(block).toContainText("without dismissing employees");
+  await expect(block).toContainText("без увольнения сотрудников");
   await block.getByRole("button", { name: "Try it out", exact: true }).click();
   await expect(block.locator(".servers")).toContainText("http://localhost:8081");
   await noOverflow(page);
@@ -52,7 +52,7 @@ test("Try it out sends an XML organization body with the correct method and head
   await page.goto("/");
   const block = await openOperation(page, "createOrganization");
   await block.getByRole("button", { name: "Try it out", exact: true }).click();
-  const input = '<organization><name>Browser Test</name><coordinates><x>1</x><y>417</y></coordinates><annualTurnover>1</annualTurnover><type>PUBLIC</type></organization>';
+  const input = '<organization><name>Browser Test</name><coordinates><x>1</x><y>42</y></coordinates><annualTurnover>1.5</annualTurnover><type>PUBLIC</type></organization>';
   await block.locator("textarea.body-param__text").fill(input);
   await block.getByRole("button", { name: "Execute", exact: true }).click();
   await expect.poll(() => captured?.method()).toBe("POST");
@@ -77,7 +77,7 @@ test("combined nested filters, sorting and pagination are serialized into the UR
   await block.locator('tr[data-param-name="size"] input').fill("5");
   await block.locator('tr[data-param-name="name"] input').fill("Research & Development");
   await block.locator('tr[data-param-name="officialAddress.town.name"] input[type="text"]').fill("Paris");
-  await block.locator('tr[data-param-name="coordinates.y"] input').fill("417");
+  await block.locator('tr[data-param-name="coordinates.y"] input').fill("42");
   await block.locator('tr[data-param-name="type"] select').selectOption("PUBLIC");
   await block.locator('tr[data-param-name="sort"] select').selectOption(["name", "-annualTurnover"]);
   await block.getByRole("button", { name: "Execute", exact: true }).click();
@@ -87,7 +87,7 @@ test("combined nested filters, sorting and pagination are serialized into the UR
   expect(params.get("size")).toBe("5");
   expect(params.get("name")).toBe("Research & Development");
   expect(params.get("officialAddress.town.name")).toBe("Paris");
-  expect(params.get("coordinates.y")).toBe("417");
+  expect(params.get("coordinates.y")).toBe("42");
   expect(params.get("type")).toBe("PUBLIC");
   expect(params.get("sort")).toBe("name,-annualTurnover");
   expect(captured.postData()).toBeNull();

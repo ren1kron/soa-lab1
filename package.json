@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "XML OpenAPI contracts and static Swagger UI for two organization services",
+  "description": "OpenAPI и Swagger UI для сервисов управления организациями",
   "engines": { "node": ">=22" },
   "scripts": {
     "validate": "node scripts/validate.mjs",

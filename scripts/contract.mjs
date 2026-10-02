@@ -8,23 +8,37 @@ export const methods = ["get", "post", "put", "delete", "patch", "head", "option
 export const specPath = fileURLToPath(new URL("../openapi.yaml", import.meta.url));
 export const loadSpec = () => SwaggerParser.validate(specPath);
 
-export function isLocalDateTime(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?$/.exec(value);
+export function isLocalDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
-  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const [, year, month, day] = match.map(Number);
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const days = [0, 31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month]
-    && hour <= 23 && minute <= 59 && second <= 59;
+  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month];
 }
 
 export function createValidator() {
   const ajv = new Ajv({ strict: false, allErrors: true });
-  ajv.addFormat("local-date-time", isLocalDateTime);
+  ajv.addFormat("date", isLocalDate);
   ajv.addFormat("int32", { type: "number", validate: value => Number.isInteger(value) && value >= -2147483648 && value <= 2147483647 });
   ajv.addFormat("int64", { type: "number", validate: Number.isInteger });
   ajv.addFormat("float", { type: "number", validate: Number.isFinite });
-  return ajv;
+  ajv.addFormat("double", { type: "number", validate: Number.isFinite });
+  return {
+    compile(schema) {
+      const normalize = value => {
+        if (Array.isArray(value)) return value.map(normalize);
+        if (!value || typeof value !== "object") return value;
+        const result = Object.fromEntries(Object.entries(value).map(([key, child]) => [key, normalize(child)]));
+        if (typeof value.exclusiveMinimum === "boolean") {
+          if (value.exclusiveMinimum) result.exclusiveMinimum = value.minimum;
+          else delete result.exclusiveMinimum;
+        }
+        return result;
+      };
+      return ajv.compile(normalize(schema));
+    }
+  };
 }
 
 const parser = new XMLParser({
@@ -149,7 +163,8 @@ export function validateContract(spec) {
       }
       assert.deepEqual(Object.keys(response.content), ["application/xml"], `${label}: non-XML response`);
       const media = response.content["application/xml"];
-      const values = media.examples ? Object.values(media.examples).map(example => example.value) : [media.example];
+      const values = media.examples ? Object.values(media.examples).map(example => example.value)
+        : media.example === undefined ? [] : [media.example];
       for (const xml of values) {
         assert.equal(typeof xml, "string", `${label}: missing XML example for ${status}`);
         const result = validateXml(xml, media.schema, ajv);

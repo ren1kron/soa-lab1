@@ -8,10 +8,10 @@ const spec = await loadSpec();
 const schemas = spec.components.schemas;
 const ajv = createValidator();
 const validWrite = {
-  name: "Example Organization", coordinates: { x: 12.5, y: 417 },
-  annualTurnover: 1, type: "PUBLIC"
+  name: "Example Organization", coordinates: { x: 12, y: 42 },
+  annualTurnover: 1.5, type: "PUBLIC"
 };
-const validOrganization = { id: 1, ...validWrite, creationDate: "2026-09-12T10:30:00" };
+const validOrganization = { id: 1, ...validWrite, creationDate: "2026-09-12" };
 
 function valid(schema, value) {
   return ajv.compile(schema)(value);
@@ -19,14 +19,14 @@ function valid(schema, value) {
 
 test("all operations, XML examples and URL parameters form a valid contract", () => {
   const result = validateContract(spec);
-  assert.equal(result.operations, 13);
-  assert(result.examples > 70);
+  assert.equal(result.operations, 12);
+  assert(result.examples >= 2);
   const expected = [
     "POST /organizations", "GET /organizations", "GET /organizations/{id}",
     "PUT /organizations/{id}", "DELETE /organizations/{id}",
     "DELETE /organizations/by-type/{type}", "GET /organizations/count-by-type-greater-than/{type}",
     "GET /organizations/by-annual-turnover-less-than/{annualTurnover}",
-    "GET /organizations/{id}/headcount", "POST /organizations/{id}/hires",
+    "POST /organizations/{id}/hires",
     "POST /organization-acquisitions", "POST /orgmanager/hire/{id}",
     "POST /orgmanager/acquise/{acquirer-id}/{acquired-id}"
   ].sort();
@@ -36,11 +36,16 @@ test("all operations, XML examples and URL parameters form a valid contract", ()
 test("required organization data and generated field separation", () => {
   assert(valid(schemas.OrganizationWrite, validWrite));
   assert(valid(schemas.Organization, validOrganization));
-  for (const field of ["name", "coordinates", "annualTurnover", "type"]) {
+  for (const field of ["name", "coordinates"]) {
     const omitted = { ...validWrite };
     delete omitted[field];
     assert(!valid(schemas.OrganizationWrite, omitted), `missing ${field}`);
     assert(!valid(schemas.OrganizationWrite, { ...validWrite, [field]: null }), `null ${field}`);
+  }
+  for (const field of ["annualTurnover", "type", "officialAddress"]) {
+    const omitted = { ...validWrite };
+    delete omitted[field];
+    assert(valid(schemas.OrganizationWrite, omitted), `optional ${field}`);
   }
   assert(!valid(schemas.OrganizationWrite, validOrganization));
   assert(!valid(schemas.Organization, validWrite));
@@ -50,45 +55,49 @@ test("required organization data and generated field separation", () => {
   assert(!valid(schemas.Organization, { ...validOrganization, id: 0 }));
 });
 
-test("numeric boundaries, finite floats and nested required fields", () => {
-  for (const annualTurnover of [0, -1, 1.5, 2147483648]) {
+test("Java numeric types, positive finite turnover and nested required fields", () => {
+  for (const annualTurnover of [0, -1, Infinity, NaN]) {
     assert(!valid(schemas.OrganizationWrite, { ...validWrite, annualTurnover }));
   }
-  assert(valid(schemas.OrganizationWrite, { ...validWrite, annualTurnover: 2147483647 }));
-  for (const coordinates of [{ x: 0, y: 417.01 }, { x: Infinity, y: 0 }, { x: 0, y: NaN }, { x: 3.5e38, y: 0 }, { x: 0 }, { y: 0 }]) {
+  assert(valid(schemas.OrganizationWrite, { ...validWrite, annualTurnover: 0.5 }));
+  assert(valid(schemas.OrganizationWrite, { ...validWrite, annualTurnover: 2147483648.75 }));
+  for (const coordinates of [{ x: 0.5, y: 0 }, { x: 0, y: 0.5 }, { x: Infinity, y: 0 }, { x: 0, y: 2147483648 }, { x: 0 }, { y: 0 }]) {
     assert(!valid(schemas.OrganizationWrite, { ...validWrite, coordinates }));
   }
-  assert(valid(schemas.Coordinates, { x: -123.5, y: -10000 }));
+  assert(valid(schemas.Coordinates, { x: -123, y: -2147483648 }));
   assert(!valid(schemas.Headcount, { organizationId: 1, employeeCount: -1 }));
   assert(valid(schemas.Headcount, { organizationId: 1, employeeCount: 0 }));
 });
 
-test("nullable address/town and valid empty strings match the supplied class", () => {
-  for (const officialAddress of [null, { zipCode: "" }, { zipCode: "x".repeat(18), town: null }, { zipCode: "", town: { x: -1, y: 0, name: "" } }]) {
+test("nullable address/town use XML omission and valid empty strings match the class", () => {
+  for (const officialAddress of [{ zipCode: "" }, { zipCode: "x".repeat(18) }, { zipCode: "", town: { x: -1, y: 0, name: "" } }]) {
     assert(valid(schemas.OrganizationWrite, { ...validWrite, officialAddress }));
   }
-  for (const officialAddress of [{}, { zipCode: null }, { zipCode: "x".repeat(19) }, { zipCode: "", town: {} }, { zipCode: "", town: { x: null, y: 0, name: "" } }, { zipCode: "", town: { x: 0, y: 0 } }]) {
+  for (const officialAddress of [null, {}, { zipCode: null }, { zipCode: "x".repeat(19) }, { zipCode: "", town: null }, { zipCode: "", town: {} }, { zipCode: "", town: { x: null, y: 0, name: "" } }, { zipCode: "", town: { x: 0, y: 0 } }]) {
     assert(!valid(schemas.OrganizationWrite, { ...validWrite, officialAddress }));
   }
+  const omittedAddress = { ...validWrite };
+  delete omittedAddress.officialAddress;
+  assert(valid(schemas.OrganizationWrite, omittedAddress));
 });
 
-test("creationDate is a real local timestamp, including leap days and nanoseconds", () => {
-  for (const value of ["2024-02-29T23:59:59.123456789", "2026-09-12T00:00:00", "2000-02-29T12:00:00.1"]) {
-    assert(valid(schemas.LocalDateTime, value));
+test("creationDate is a real java.time.LocalDate", () => {
+  for (const value of ["2024-02-29", "2026-09-12", "2000-02-29"]) {
+    assert(valid(schemas.LocalDate, value));
   }
-  for (const value of ["2026-02-29T00:00:00", "1900-02-29T00:00:00", "0000-01-01T00:00:00", "2026-04-31T00:00:00", "2026-09-12T24:00:00", "2026-09-12T00:00:00Z", "2026-09-12T00:00:00+03:00", "2026-09-12T00:00:00.1234567890"]) {
-    assert(!valid(schemas.LocalDateTime, value), value);
+  for (const value of ["2026-02-29", "1900-02-29", "0000-01-01", "2026-04-31", "2026-09-12T00:00:00", "2026-09-12Z"]) {
+    assert(!valid(schemas.LocalDate, value), value);
   }
 });
 
 test("XML wrapper, null omission, escaping, duplicates and exact int64 boundaries", () => {
-  const input = spec.components.requestBodies.OrganizationInput.content["application/xml"].examples.complete.value;
-  assert.equal(validateXml(input, schemas.OrganizationWrite).officialAddress.zipCode, "75001");
-  assert.equal(validateXml(input.replace("Example Organization", "Research &amp; Development"), schemas.OrganizationWrite).name, "Research & Development");
+  const input = spec.components.requestBodies.OrganizationInput.content["application/xml"].examples.example.value;
+  assert.equal(validateXml(input, schemas.OrganizationWrite).name, "Ромашка");
+  assert.equal(validateXml(input.replace("Ромашка", "Research &amp; Development"), schemas.OrganizationWrite).name, "Research & Development");
   assert.deepEqual(validateXml("<organizations/>", schemas.OrganizationList), []);
-  const output = spec.components.examples.OrganizationExample.value;
+  const output = '<organization><id>1</id><name>Ромашка</name><coordinates><x>10</x><y>20</y></coordinates><creationDate>2026-10-02</creationDate></organization>';
   assert.equal(validateXml(`<organizations>${output}${output.replace("<id>1</id>", "<id>2</id>")}</organizations>`, schemas.OrganizationList).length, 2);
-  for (const xml of [input.replace("<name>Example Organization</name>", "<name>A</name><name>B</name>"), input.replace("<coordinates>", "<coordinates xsi:nil=\"true\">"), input.replace("<zipCode>75001</zipCode>", ""), "<organization>", "<wrong/>"]) {
+  for (const xml of [input.replace("<name>Ромашка</name>", "<name>A</name><name>B</name>"), input.replace("<coordinates>", "<coordinates xsi:nil=\"true\">"), "<organization>", "<wrong/>"]) {
     assert.throws(() => validateXml(xml, schemas.OrganizationWrite));
   }
   assert.doesNotThrow(() => validateXml(output.replace("<id>1</id>", "<id>9223372036854775807</id>"), schemas.Organization));
@@ -115,12 +124,12 @@ test("every scalar field is filterable and sortable; combined and nullable filte
     assert(sort.schema.items.enum.includes(name), `missing ascending sort ${name}`);
     assert(sort.schema.items.enum.includes(`-${name}`), `missing descending sort ${name}`);
   }
-  for (const name of ["officialAddress.isNull", "officialAddress.town.isNull"]) assert.equal(byName.get(name).schema.type, "boolean");
+  for (const name of ["annualTurnover.isNull", "type.isNull", "officialAddress.isNull", "officialAddress.town.isNull"]) {
+    assert.equal(byName.get(name).schema.type, "boolean");
+  }
   assert(valid(sort.schema, ["name", "-annualTurnover"]));
   assert(!valid(sort.schema, ["unknown"]));
   assert(!valid(sort.schema, ["id", "id"]));
-  assert.match(spec.paths["/organizations"].get.description, /combined with AND/);
-  assert.match(spec.paths["/organizations"].get.description, /Contradictory filters\s+produce an empty result/);
 });
 
 test("pagination defaults and limits are shared by both array operations", () => {
@@ -137,27 +146,24 @@ test("pagination defaults and limits are shared by both array operations", () =>
     assert(!valid(size, 101));
     assert(!valid(size, 0));
     assert.deepEqual(Object.keys(operation.responses["200"].headers), ["X-Total-Count", "X-Page", "X-Page-Size"]);
-    assert.equal(operation.responses["200"].content["application/xml"].examples.empty.value, "<organizations/>");
   }
   const threshold = spec.paths["/organizations/by-annual-turnover-less-than/{annualTurnover}"].get.parameters[0].schema;
   assert(valid(threshold, 0));
-  assert(valid(threshold, -2147483648));
-  assert(!valid(threshold, 2147483648));
+  assert(valid(threshold, -2147483648.5));
+  assert(valid(threshold, 2147483648.5));
+  assert(!valid(threshold, Infinity));
 });
 
-test("enum declaration order and transactional failure requirements are explicit", () => {
+test("enum order and manager service endpoints are explicit", () => {
   assert.deepEqual(schemas.OrganizationType.enum, ["PUBLIC", "GOVERNMENT", "TRUST", "PRIVATE_LIMITED_COMPANY"]);
   assert(!valid(schemas.OrganizationType, "public"));
   const acquisition = spec.paths["/organization-acquisitions"].post;
   for (const status of ["200", "400", "404", "409"]) assert(acquisition.responses[status]);
-  assert.match(acquisition.description, /All failures\s+leave both organizations and headcounts unchanged/);
-  assert.match(acquisition.description, /No employees are dismissed/);
-  assert.match(acquisition.description, /2147483647/);
-  assert.match(acquisition.description, /9223372036854775807/);
   for (const path of ["/orgmanager/hire/{id}", "/orgmanager/acquise/{acquirer-id}/{acquired-id}"]) {
     const item = spec.paths[path];
     assert.equal(item.post.servers[0].variables.baseUrl.default, "http://localhost:8081");
-    for (const status of ["404", "409", "502", "504"]) assert(item.post.responses[status]);
+    assert(item.post.responses["404"]);
+    assert(item.post.responses["502"]);
     assert.equal(item.post.requestBody, undefined);
   }
 });

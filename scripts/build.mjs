@@ -33,7 +33,6 @@ for (const name of ["index.html", "swagger.css", "swagger-initializer.js"]) {
 if (collectionUrl === "http://localhost:8080" && managerUrl === "http://localhost:8081") {
   await copyFile(join(root, "openapi.yaml"), join(output, "openapi.yaml"));
 } else {
-  // Keep the source YAML text and its exact int64 limits when changing server defaults.
   const document = YAML.parseDocument(await readFile(join(root, "openapi.yaml"), "utf8"), { intAsBigInt: true });
   document.setIn(["servers", 0, "variables", "baseUrl", "default"], collectionUrl);
   for (const path of Object.keys(spec.paths).filter(path => path.startsWith("/orgmanager/"))) {
