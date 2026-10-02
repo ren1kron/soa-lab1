@@ -5,28 +5,34 @@ Organization Collection service and a separate Organization Manager service.
 The source of truth is [`openapi.yaml`](./openapi.yaml). All 13 operations have
 textual descriptions, typed inputs, XML examples and documented error responses.
 
-This repository contains the API contracts and documentation, not backend services.
-Browser tests intercept API requests to verify Swagger's request generation; they
-do not demonstrate backend business behavior. Helios deployment is prepared but
-has not been performed.
+The site is a static HTML page that loads the specification with Swagger UI.
+Swagger UI 5.32.15 is included in `vendor/`, together with its license notices.
+There is no build step, npm dependency, or CDN requirement.
+
+This repository contains API contracts and documentation. A backend service must
+be running separately for Swagger's "Try it out" requests to return API data.
+
+## Files
+
+```text
+index.html       HTML page and Swagger UI initialization
+openapi.yaml     API specification
+swagger.css      Page styling
+vendor/          Downloaded Swagger UI assets and license notices
+```
 
 ## Run locally
 
-Requires Node.js 22 or newer and npm.
+From this repository's root directory, start a static HTTP server:
 
 ```sh
-npm ci
-npm run build
-npm run preview
+python3 -m http.server 26125 --bind 127.0.0.1
 ```
 
-Open <http://127.0.0.1:4400/>. If the port is occupied, use
-`PORT=4401 npm run preview`. Serve the generated `dist/` directory over HTTP;
-opening `index.html` with `file://` prevents the specification fetch in browsers.
-
-`dist/` contains the specification, HTML, stylesheet, initializer, pinned Swagger
-UI assets and third-party license notices. It needs only a static web server,
-without Node.js, a CDN or an external specification validator on Helios.
+Open <http://127.0.0.1:26125/>. If your Python 3 executable is named `python`,
+use that instead of `python3`. Leave the server running while using the page.
+Opening `index.html` with `file://` prevents the specification fetch in browsers.
+Edits to the HTML, CSS, or YAML take effect after reloading the page.
 
 ## API decisions
 
@@ -34,22 +40,29 @@ without Node.js, a CDN or an external specification validator on Helios.
   IDs, filters, sorting and pagination are URL parameters. This is the agreed
   interpretation of the assignment's URL-only parameter requirement.
 - `OrganizationWrite` excludes generated `id` and `creationDate`; `Organization`
-  requires them. PUT replaces mutable fields and preserves ID, timestamp and headcount.
+  requires them. PUT replaces mutable fields and preserves ID, creation date and headcount.
 - Every required Java field is explicitly required in the API, including both
   primitive coordinates. `name` is nonempty, but not necessarily nonblank.
   ZIP codes and town names can be empty. Town coordinates can be zero or negative.
-- XML nulls are represented by omitted `officialAddress` or `town` elements.
+- `coordinates.x` is a Java `long` (`int64`) and `coordinates.y` is a Java `int`
+  (`int32`). Both are required. There is no additional limit of 417 on `y`.
+- `annualTurnover` is an optional positive finite Java `Double`, including
+  fractional values. `type` is also optional.
+- XML nulls are represented by omitted `annualTurnover`, `type`, `officialAddress`
+  or `town` elements.
   An empty ZIP code uses `<zipCode/>`. `xsi:nil` is unsupported. An empty address
   or town is invalid because their own required fields are missing.
-- Creation timestamps use local ISO calendar time with seconds and optional
-  nanoseconds, no timezone suffix, and years 0001-9999. Collection instances must
-  share a configured time zone. This is a custom `local-date-time` format, not
-  OpenAPI's RFC 3339 `date-time` format.
+- `creationDate` is a generated Java `LocalDate` in `YYYY-MM-DD` format
+  (OpenAPI `date`), with valid calendar dates and years 0001-9999. It contains
+  no time or timezone suffix. Collection instances share a configured time zone
+  when generating the current date.
 - Java Long values remain decimal integers in XML. Clients must preserve all 64
-  bits; JavaScript clients must not parse large IDs through `Number`.
+  bits; JavaScript clients must not parse large IDs or `int64` coordinates through `Number`.
 - All scalar fields have optional equality filters. Nested fields use dotted
   names. Filters combine with AND and exact, case-sensitive string matching.
-  `officialAddress.isNull` and `officialAddress.town.isNull` test nullable objects.
+  `annualTurnover.isNull`, `type.isNull`, `officialAddress.isNull` and
+  `officialAddress.town.isNull` select null or present values. Ordinary equality
+  filters match only non-null values.
 - Sorting uses `sort=name,-annualTurnover`, with nulls last and ascending ID as
   the final tie-breaker. Enum order is `PUBLIC < GOVERNMENT < TRUST < PRIVATE_LIMITED_COMPANY`.
 - Pagination uses `page=1&size=20` by default, with size 1-100. Responses are XML
@@ -60,10 +73,14 @@ without Node.js, a CDN or an external specification validator on Helios.
   violating organization constraints returns `422`. Missing organizations return
   `404`; self-acquisition and overflow return `409`. Unsupported response and
   request media types return `406` and `415`, respectively.
+- Type comparisons exclude null types, and turnover threshold comparisons exclude
+  null turnovers. Turnover thresholds accept finite fractional values; zero or
+  negative thresholds produce an empty result.
 - Employee counts are separate collection-service resources, initially zero.
-  Hiring increments one count atomically. Acquisition sums turnover and headcount,
-  preserves the acquirer's other fields, and deletes the acquired organization.
-  Validation failure or overflow must leave both organizations unchanged.
+  Hiring increments one count atomically. Acquisition transfers all employees
+  and deletes the acquired organization. It preserves every field of the acquirer,
+  including annual turnover, and changes only its separate headcount.
+  Validation failure or headcount overflow leaves both organizations unchanged.
 - The manager calls the collection service's atomic hiring/acquisition endpoints.
   It forwards domain failures and maps upstream failures/timeouts to `502`/`504`.
   Mutations are not automatically retried because their outcome may be unknown.
@@ -80,19 +97,20 @@ the first service's Workforce tag.
 ## Configure backend URLs
 
 Defaults are `http://localhost:8080` for the collection and `http://localhost:8081`
-for the manager. They are placeholders for future implementations. Set the actual
-backend URLs when building, without adding `/orgmanager` to the manager base URL:
+for the manager. They are placeholders for future implementations. To change
+them permanently, edit the `servers[].variables.baseUrl.default` values in
+`openapi.yaml`: the top-level server for the collection and the operation-level
+servers for both `/orgmanager` routes. Do not add `/orgmanager` to the manager
+base URL because the operation paths already contain it.
 
-```sh
-ORGANIZATION_API_URL=https://api.example.org/collection \
-MANAGER_API_URL=https://api.example.org/manager \
-npm run build
-```
+Swagger UI also exposes editable server variables for the current page session.
+Each manager operation exposes its own server control when expanded.
 
-The source specification is unchanged; server defaults are updated only in
-`dist/openapi.yaml`. Swagger UI also exposes editable server variables. Each
-manager operation overrides the collection service's server URL and exposes its
-own server control when expanded in Swagger UI.
+The documentation port (`26125`) serves static files; it does not implement
+`/organizations` or `/orgmanager` endpoints. "Try it out" sends real HTTP requests
+to the configured API URLs, and documented examples are not automatic responses.
+In a browser, `localhost` refers to the machine running the browser. APIs running
+on Helios require separate port forwards or a publicly reachable API URL.
 
 For cross-origin "Try it out", the API servers must allow the documentation's
 origin, required methods (`GET`, `POST`, `PUT`, `DELETE`, and preflight `OPTIONS`)
@@ -100,70 +118,41 @@ and the `Content-Type` and `Accept` headers. Expose `Location`, `X-Total-Count`,
 `X-Page` and `X-Page-Size` to the browser. An HTTPS documentation site needs
 HTTPS backend URLs to avoid mixed-content blocking. No authentication is specified.
 
-## Validate
+## Run on Helios through an SSH tunnel
+
+On your local machine, from this repository's root directory, copy the page,
+specification, stylesheet, and complete `vendor/` directory to your existing
+remote directory:
 
 ```sh
-npm run validate
-npm test
-npx playwright install chromium
-npm run test:ui
+ssh helios 'mkdir -p ~/soa/soa-lab1/dist'
+scp -r index.html openapi.yaml swagger.css vendor helios:~/soa/soa-lab1/dist/
 ```
 
-`npm run check` runs all checks. An existing Google Chrome installation can be
-used instead of downloading Chromium: `PLAYWRIGHT_CHANNEL=chrome npm run test:ui`.
-UI tests run at desktop and mobile sizes, intercept API calls, verify XML bodies
-and URL serialization, and exercise a Helios-style nested documentation path.
-Screenshots are written under `test-results/`; failed tests also retain traces.
+The remote directory is still named `dist` to match your existing deployment;
+it contains direct copies of the source files, with no local build required.
+The upload overwrites matching files. Unrelated remote files may remain and
+are not required by this page.
 
-Validation checks OpenAPI structure and references, unique operation IDs, URL
-parameters, and every request/response XML example against its schema. Contract
-tests cover generated fields, required/nested fields, numeric boundaries,
-nulls and empty strings, local calendar dates, filters, sorting, pagination,
-enum order, failure responses and the manager's server overrides.
-
-Future backend acceptance checks must additionally verify persisted CRUD,
-combined-filter results, stable pagination, delete-exactly-one behavior, strict
-threshold comparisons, concurrent hires, acquisition conservation of employees,
-transaction rollback on overflow, and upstream timeout behavior. Those behaviors
-cannot be executed against a specification alone.
-
-## Prepare and deploy to Helios
-
-Use the SSH account, port and public web directory assigned to you. No host,
-account or Helios web-directory layout is assumed. `HELIOS_WEB_DIR` is a dedicated
-documentation directory, absolute or relative to the remote home directory; use
-`public_html/soa-lab1`, for example, only if that is your actual web directory.
-SSH uses your existing authentication and host-key configuration; no credentials
-are stored in this repository.
+In one terminal, connect to Helios. Stop the previous HTTP server with Ctrl+C
+if it is already using port `26125`, then start the server from that directory:
 
 ```sh
-export HELIOS_HOST=your-helios-ssh-host
-export HELIOS_USER=your-account
-export HELIOS_PORT=22
-export HELIOS_WEB_DIR=public_html/soa-lab1
-export HELIOS_PUBLIC_URL=https://your-public-host/~your-account/soa-lab1/
-
-npm run deploy -- --dry-run
+ssh helios
+cd ~/soa/soa-lab1/dist
+python -m http.server 26125 --bind 127.0.0.1
 ```
 
-The dry run validates configuration, builds the static site, and prints the
-exact `ssh` and `scp` commands without connecting. Preserve any configured
-`ORGANIZATION_API_URL` and `MANAGER_API_URL` in the environment when using
-`npm run deploy`, because that command rebuilds the site.
-
-When the destination is correct, upload with:
+In a second local terminal, forward the documentation port:
 
 ```sh
-npm run deploy
-curl --fail --head "$HELIOS_PUBLIC_URL"
-curl --fail --head "${HELIOS_PUBLIC_URL}openapi.yaml"
+ssh -N -o ExitOnForwardFailure=yes -L 26125:127.0.0.1:26125 helios
 ```
 
-The upload creates the target directory and overwrites matching documentation
-files; it does not delete unrelated remote files or change remote permissions.
-The target must already be accessible to the Helios web server according to
-your account's hosting setup. Check the public URL in a browser, all 13
-operations, relative assets, and both configured API server URLs after upload.
+If you already have this tunnel open, reuse it. Keep both terminals open and
+visit <http://127.0.0.1:26125/> on your local machine. Reload the page after
+uploading changes. All 13 operations should appear, with no asset downloads
+from a CDN.
 
 ## References
 

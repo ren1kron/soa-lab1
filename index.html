@@ -13,6 +13,22 @@
     <div id="swagger-ui"></div>
     <noscript>JavaScript is required to display Swagger UI. <a href="./openapi.yaml">Download the OpenAPI specification.</a></noscript>
     <script src="./vendor/swagger-ui-bundle.js"></script>
-    <script src="./swagger-initializer.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "./openapi.yaml",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        displayOperationId: false,
+        displayRequestDuration: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 0,
+        filter: true,
+        persistAuthorization: false,
+        validatorUrl: null,
+        queryConfigEnabled: false,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: "BaseLayout"
+      });
+    </script>
   </body>
 </html>

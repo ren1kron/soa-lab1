@@ -34,7 +34,7 @@ body { margin: 0; background: #fff; }
   .swagger-ui .parameter__name, .swagger-ui .parameter__type { font-size: 12px; overflow-wrap: anywhere; }
   .swagger-ui .parameters-col_description input { min-width: 0; width: 100%; }
   .swagger-ui .btn { white-space: normal; }
-  .swagger-ui .servers > label { max-width: 100%; }
+  .swagger-ui .servers > label { max-width: 100%; margin-right: 0; }
   .swagger-ui .servers select { min-width: 0; }
   .swagger-ui .servers .computed-url { overflow-wrap: anywhere; }
   .swagger-ui .opblock-tag { font-size: 19px; }
