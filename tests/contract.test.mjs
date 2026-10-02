@@ -91,7 +91,7 @@ test("creationDate is a real java.time.LocalDate", () => {
 });
 
 test("XML wrapper, null omission, escaping, duplicates and exact int64 boundaries", () => {
-  const input = spec.components.requestBodies.OrganizationInput.content["application/xml"].examples.example.value;
+  const input = spec.components.requestBodies.CreateOrganizationInput.content["application/xml"].examples.example.value;
   assert.equal(validateXml(input, schemas.OrganizationWrite).name, "Ромашка");
   assert.equal(validateXml(input.replace("Ромашка", "Research &amp; Development"), schemas.OrganizationWrite).name, "Research & Development");
   assert.deepEqual(validateXml("<organizations/>", schemas.OrganizationList), []);
@@ -107,7 +107,7 @@ test("XML wrapper, null omission, escaping, duplicates and exact int64 boundarie
   assert.throws(() => validateXml(townMin.replace("-9223372036854775808", "-9223372036854775809"), schemas.OrganizationWrite));
 });
 
-test("every scalar field is filterable and sortable; combined and nullable filters are exposed", () => {
+test("filtering is compact and sorting supports every scalar field", () => {
   function leafPaths(schema, prefix = "") {
     return Object.entries(schema.properties).flatMap(([name, field]) => {
       const path = prefix ? `${prefix}.${name}` : name;
@@ -118,14 +118,16 @@ test("every scalar field is filterable and sortable; combined and nullable filte
   const params = spec.paths["/organizations"].get.parameters;
   const byName = new Map(params.map(parameter => [parameter.name, parameter]));
   const sort = byName.get("sort");
+  const filter = byName.get("filter");
+  assert.equal(params.length, 4);
+  assert.equal(filter.schema.type, "array");
+  for (const operator of ["eq", "ne", "gt", "gte", "lt", "lte", "contains", "startsWith", "in", "isNull"]) {
+    assert.match(filter.description, new RegExp(`\\b${operator}\\b`));
+  }
   assert.equal(sort.explode, false);
   for (const name of leaves) {
-    assert(byName.has(name), `missing filter ${name}`);
     assert(sort.schema.items.enum.includes(name), `missing ascending sort ${name}`);
     assert(sort.schema.items.enum.includes(`-${name}`), `missing descending sort ${name}`);
-  }
-  for (const name of ["annualTurnover.isNull", "type.isNull", "officialAddress.isNull", "officialAddress.town.isNull"]) {
-    assert.equal(byName.get(name).schema.type, "boolean");
   }
   assert(valid(sort.schema, ["name", "-annualTurnover"]));
   assert(!valid(sort.schema, ["unknown"]));

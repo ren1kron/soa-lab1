@@ -30,16 +30,12 @@ await mkdir(join(output, "vendor"), { recursive: true });
 for (const name of ["index.html", "swagger.css", "swagger-initializer.js"]) {
   await copyFile(join(root, name), join(output, name));
 }
-if (collectionUrl === "http://localhost:8080" && managerUrl === "http://localhost:8081") {
-  await copyFile(join(root, "openapi.yaml"), join(output, "openapi.yaml"));
-} else {
-  const document = YAML.parseDocument(await readFile(join(root, "openapi.yaml"), "utf8"), { intAsBigInt: true });
-  document.setIn(["servers", 0, "variables", "baseUrl", "default"], collectionUrl);
-  for (const path of Object.keys(spec.paths).filter(path => path.startsWith("/orgmanager/"))) {
-    document.setIn(["paths", path, "post", "servers", 0, "variables", "baseUrl", "default"], managerUrl);
-  }
-  await writeFile(join(output, "openapi.yaml"), document.toString());
+const document = YAML.parseDocument(await readFile(join(root, "openapi.yaml"), "utf8"), { intAsBigInt: true });
+document.setIn(["servers", 0, "variables", "baseUrl", "default"], collectionUrl);
+for (const path of Object.keys(spec.paths).filter(path => path.startsWith("/orgmanager/"))) {
+  document.setIn(["paths", path, "post", "servers", 0, "variables", "baseUrl", "default"], managerUrl);
 }
+await writeFile(join(output, "openapi.yaml"), document.toString());
 for (const name of ["swagger-ui.css", "swagger-ui-bundle.js", "swagger-ui-bundle.js.LICENSE.txt", "favicon-32x32.png", "LICENSE", "NOTICE"]) {
   await copyFile(join(vendor, name), join(output, "vendor", name));
 }

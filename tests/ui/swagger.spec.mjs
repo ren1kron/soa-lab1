@@ -25,12 +25,12 @@ test("all operations and local assets render under a Helios-style path", async (
   page.on("request", request => origins.add(new URL(request.url()).origin));
   await page.goto("/~student/soa-lab1/");
   await expect(page.locator(".opblock")).toHaveCount(12);
-  await expect(page.getByRole("heading", { name: /Управление организациями/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Сервисы управления организациями/ })).toBeVisible();
   await expect(page.locator(".errors-wrapper")).toHaveCount(0);
   await noOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("overview.png"), fullPage: true });
   const block = await openOperation(page, "managerAcquireOrganization");
-  await expect(block).toContainText("без увольнения сотрудников");
+  await expect(block).toContainText("без увольнения");
   await block.getByRole("button", { name: "Try it out", exact: true }).click();
   await expect(block.locator(".servers")).toContainText("http://localhost:8081");
   await noOverflow(page);
@@ -64,7 +64,7 @@ test("Try it out sends an XML organization body with the correct method and head
   await noOverflow(page);
 });
 
-test("combined nested filters, sorting and pagination are serialized into the URL", async ({ page }) => {
+test("compact range, text and multi-value filters are serialized into the URL", async ({ page }) => {
   let captured;
   await page.route("http://localhost:8080/organizations?**", async route => {
     captured = route.request();
@@ -75,20 +75,17 @@ test("combined nested filters, sorting and pagination are serialized into the UR
   await block.getByRole("button", { name: "Try it out", exact: true }).click();
   await block.locator('tr[data-param-name="page"] input').fill("2");
   await block.locator('tr[data-param-name="size"] input').fill("5");
-  await block.locator('tr[data-param-name="name"] input').fill("Research & Development");
-  await block.locator('tr[data-param-name="officialAddress.town.name"] input[type="text"]').fill("Paris");
-  await block.locator('tr[data-param-name="coordinates.y"] input').fill("42");
-  await block.locator('tr[data-param-name="type"] select').selectOption("PUBLIC");
+  const filters = ["name:contains:Ромашка", "annualTurnover:gte:1000", "annualTurnover:lte:5000", "type:in:PUBLIC|TRUST"];
+  const filterInputs = block.locator('tr[data-param-name="filter"] input');
+  await expect(filterInputs).toHaveCount(filters.length);
+  for (let index = 0; index < filters.length; index++) await filterInputs.nth(index).fill(filters[index]);
   await block.locator('tr[data-param-name="sort"] select').selectOption(["name", "-annualTurnover"]);
   await block.getByRole("button", { name: "Execute", exact: true }).click();
   await expect.poll(() => captured?.method()).toBe("GET");
   const params = new URL(captured.url()).searchParams;
   expect(params.get("page")).toBe("2");
   expect(params.get("size")).toBe("5");
-  expect(params.get("name")).toBe("Research & Development");
-  expect(params.get("officialAddress.town.name")).toBe("Paris");
-  expect(params.get("coordinates.y")).toBe("42");
-  expect(params.get("type")).toBe("PUBLIC");
+  expect(params.get("filter")).toBe(filters.join(","));
   expect(params.get("sort")).toBe("name,-annualTurnover");
   expect(captured.postData()).toBeNull();
   await expect(block.locator(".live-responses-table")).toContainText("200");

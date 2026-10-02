@@ -32,7 +32,6 @@ const server = createServer(async (request, response) => {
     response.writeHead(400).end();
     return;
   }
-  // A second mount verifies relative assets under a Helios-style user directory.
   if (path.startsWith("~student/soa-lab1/")) path = path.slice("~student/soa-lab1/".length) || "index.html";
   if (!files.has(path)) {
     response.writeHead(404).end("Not found");

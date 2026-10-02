@@ -1,290 +1,631 @@
 openapi: 3.0.3
 info:
-  title: Управление организациями
+  title: Сервисы управления организациями
   version: 1.0.0
   description: Спецификация двух сервисов. Данные передаются в XML.
 servers:
-  - url: '{baseUrl}'
-    description: Первый сервис
+  - url: "{baseUrl}"
+    description: Сервис организаций
     variables:
-      baseUrl: {default: 'http://localhost:8080'}
+      baseUrl:
+        default: "http://localhost:8080"
 tags:
-  - {name: Организации, description: Основные операции}
-  - {name: Дополнительные операции, description: Операции над коллекцией}
-  - {name: Сотрудники, description: Операции для второго сервиса}
-  - {name: Менеджер, description: Второй сервис}
+  - name: Организации
+    description: Основные операции
+  - name: Дополнительные операции
+    description: Операции над коллекцией
+  - name: Сотрудники
+    description: Операции для второго сервиса
+  - name: Менеджер организаций
+    description: Второй сервис
 paths:
   /organizations:
     post:
-      tags: [Организации]
+      tags:
+        - Организации
       operationId: createOrganization
       summary: Добавить организацию
-      description: Создаёт организацию. id и creationDate генерируются автоматически.
-      requestBody: {$ref: '#/components/requestBodies/OrganizationInput'}
+      description: Создаёт организацию
+      requestBody:
+        $ref: "#/components/requestBodies/CreateOrganizationInput"
       responses:
-        '201': {$ref: '#/components/responses/OrganizationCreated'}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '422': {$ref: '#/components/responses/ValidationError'}
+        "201":
+          $ref: "#/components/responses/OrganizationCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/ValidationError"
     get:
-      tags: [Организации]
+      tags:
+        - Организации
       operationId: listOrganizations
       summary: Получить список организаций
-      description: Поддерживает фильтрацию по полям, сортировку и пагинацию.
+      description: Условия filter объединяются через И. Поддерживаются диапазоны, поиск по части строки и несколько значений.
       parameters:
-        - {$ref: '#/components/parameters/Page'}
-        - {$ref: '#/components/parameters/Size'}
-        - {$ref: '#/components/parameters/Sort'}
-        - {$ref: '#/components/parameters/FilterId'}
-        - {$ref: '#/components/parameters/FilterName'}
-        - {$ref: '#/components/parameters/FilterCoordinatesX'}
-        - {$ref: '#/components/parameters/FilterCoordinatesY'}
-        - {$ref: '#/components/parameters/FilterCreationDate'}
-        - {$ref: '#/components/parameters/FilterAnnualTurnover'}
-        - {$ref: '#/components/parameters/FilterAnnualTurnoverIsNull'}
-        - {$ref: '#/components/parameters/FilterType'}
-        - {$ref: '#/components/parameters/FilterTypeIsNull'}
-        - {$ref: '#/components/parameters/FilterZipCode'}
-        - {$ref: '#/components/parameters/FilterTownX'}
-        - {$ref: '#/components/parameters/FilterTownY'}
-        - {$ref: '#/components/parameters/FilterTownName'}
-        - {$ref: '#/components/parameters/FilterAddressIsNull'}
-        - {$ref: '#/components/parameters/FilterTownIsNull'}
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Filter"
       responses:
-        '200': {$ref: '#/components/responses/OrganizationPage'}
-        '400': {$ref: '#/components/responses/BadRequest'}
+        "200":
+          $ref: "#/components/responses/OrganizationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /organizations/{id}:
     parameters:
-      - {$ref: '#/components/parameters/OrganizationId'}
+      - $ref: "#/components/parameters/OrganizationId"
     get:
-      tags: [Организации]
+      tags:
+        - Организации
       operationId: getOrganization
       summary: Получить организацию по ID
       description: Возвращает организацию по её идентификатору.
       responses:
-        '200': {$ref: '#/components/responses/OrganizationResult'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        "200":
+          $ref: "#/components/responses/OrganizationResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
     put:
-      tags: [Организации]
+      tags:
+        - Организации
       operationId: updateOrganization
       summary: Изменить организацию
       description: Заменяет изменяемые поля организации.
-      requestBody: {$ref: '#/components/requestBodies/OrganizationInput'}
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateOrganizationInput"
       responses:
-        '200': {$ref: '#/components/responses/OrganizationResult'}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
+        "200":
+          $ref: "#/components/responses/OrganizationResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
     delete:
-      tags: [Организации]
+      tags:
+        - Организации
       operationId: deleteOrganization
       summary: Удалить организацию
       description: Удаляет организацию по ID.
       responses:
-        '204': {description: Организация удалена}
-        '404': {$ref: '#/components/responses/NotFound'}
+        "204":
+          description: Организация удалена
+        "404":
+          $ref: "#/components/responses/NotFound"
   /organizations/by-type/{type}:
     delete:
-      tags: [Дополнительные операции]
+      tags:
+        - Дополнительные операции
       operationId: deleteOneOrganizationByType
       summary: Удалить одну организацию заданного типа
       description: Удаляет любую одну организацию с указанным type.
       parameters:
-        - {$ref: '#/components/parameters/OrganizationTypePath'}
+        - $ref: "#/components/parameters/OrganizationTypePath"
       responses:
-        '204': {description: Организация удалена}
-        '404': {$ref: '#/components/responses/NotFound'}
+        "204":
+          description: Организация удалена
+        "404":
+          $ref: "#/components/responses/NotFound"
   /organizations/count-by-type-greater-than/{type}:
     get:
-      tags: [Дополнительные операции]
+      tags:
+        - Дополнительные операции
       operationId: countOrganizationsByTypeGreaterThan
       summary: Посчитать организации с большим type
       description: Порядок типов совпадает с порядком значений enum.
       parameters:
-        - {$ref: '#/components/parameters/OrganizationTypePath'}
+        - $ref: "#/components/parameters/OrganizationTypePath"
       responses:
-        '200': {$ref: '#/components/responses/CountResult'}
-        '400': {$ref: '#/components/responses/BadRequest'}
+        "200":
+          $ref: "#/components/responses/CountResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /organizations/by-annual-turnover-less-than/{annualTurnover}:
     get:
-      tags: [Дополнительные операции]
+      tags:
+        - Дополнительные операции
       operationId: listOrganizationsByAnnualTurnoverLessThan
       summary: Получить организации с меньшим оборотом
       description: Значения null не входят в результат.
       parameters:
-        - {name: annualTurnover, in: path, required: true, schema: {type: number, format: double}}
-        - {$ref: '#/components/parameters/Page'}
-        - {$ref: '#/components/parameters/Size'}
-        - {$ref: '#/components/parameters/Sort'}
+        - name: annualTurnover
+          in: path
+          required: true
+          schema:
+            type: number
+            format: double
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - $ref: "#/components/parameters/Sort"
       responses:
-        '200': {$ref: '#/components/responses/OrganizationPage'}
-        '400': {$ref: '#/components/responses/BadRequest'}
+        "200":
+          $ref: "#/components/responses/OrganizationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /organizations/{id}/hires:
     post:
-      tags: [Сотрудники]
+      tags:
+        - Сотрудники
       operationId: hireOrganizationEmployee
       summary: Добавить сотрудника
       description: Увеличивает количество сотрудников на один.
       parameters:
-        - {$ref: '#/components/parameters/OrganizationId'}
+        - $ref: "#/components/parameters/OrganizationId"
       responses:
-        '200': {$ref: '#/components/responses/HeadcountResult'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        "200":
+          $ref: "#/components/responses/HeadcountResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /organization-acquisitions:
     post:
-      tags: [Сотрудники]
+      tags:
+        - Сотрудники
       operationId: acquireOrganization
       summary: Выполнить поглощение
       description: Переносит сотрудников и удаляет поглощённую организацию.
       parameters:
-        - {name: acquirerId, in: query, required: true, schema: {$ref: '#/components/schemas/PositiveId'}}
-        - {name: acquiredId, in: query, required: true, schema: {$ref: '#/components/schemas/PositiveId'}}
+        - name: acquirerId
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/PositiveId"
+        - name: acquiredId
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/PositiveId"
       responses:
-        '200': {$ref: '#/components/responses/AcquisitionResult'}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        "200":
+          $ref: "#/components/responses/AcquisitionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /orgmanager/hire/{id}:
     post:
       servers:
-        - url: '{baseUrl}'
+        - url: "{baseUrl}"
           description: Второй сервис
           variables:
-            baseUrl: {default: 'http://localhost:8081'}
-      tags: [Менеджер]
+            baseUrl:
+              default: "http://localhost:8081"
+      tags: [ Менеджер организаций ]
       operationId: managerHireEmployee
       summary: Нанять сотрудника
-      description: Второй сервис вызывает операцию найма первого сервиса.
+      description: Добавляет одного сотрудника в организацию через первый сервис.
       parameters:
-        - {$ref: '#/components/parameters/OrganizationId'}
+        - $ref: "#/components/parameters/OrganizationId"
       responses:
-        '200': {$ref: '#/components/responses/HeadcountResult'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '502': {$ref: '#/components/responses/BadGateway'}
+        "200":
+          $ref: "#/components/responses/HeadcountResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
   /orgmanager/acquise/{acquirer-id}/{acquired-id}:
     post:
       servers:
-        - url: '{baseUrl}'
+        - url: "{baseUrl}"
           description: Второй сервис
           variables:
-            baseUrl: {default: 'http://localhost:8081'}
-      tags: [Менеджер]
+            baseUrl:
+              default: "http://localhost:8081"
+      tags: [ Менеджер организаций ]
       operationId: managerAcquireOrganization
       summary: Выполнить поглощение
-      description: Второй сервис вызывает поглощение без увольнения сотрудников.
+      description: Переносит сотрудников без увольнения и удаляет поглощённую организацию.
       parameters:
-        - {name: acquirer-id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveId'}}
-        - {name: acquired-id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveId'}}
+        - name: acquirer-id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PositiveId"
+        - name: acquired-id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PositiveId"
       responses:
-        '200': {$ref: '#/components/responses/AcquisitionResult'}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '502': {$ref: '#/components/responses/BadGateway'}
+        "200":
+          $ref: "#/components/responses/AcquisitionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "502":
+          $ref: "#/components/responses/BadGateway"
 components:
   schemas:
-    PositiveId: {type: integer, format: int64, minimum: 1, maximum: 9223372036854775807}
-    LocalDate: {type: string, format: date, pattern: '^(?!0000)\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$'}
-    AnnualTurnover: {type: number, format: double, minimum: 0, exclusiveMinimum: true, maximum: 1.7976931348623157e+308}
-    OrganizationType: {type: string, enum: [PUBLIC, GOVERNMENT, TRUST, PRIVATE_LIMITED_COMPANY]}
+    PositiveId:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9223372036854775807
+    LocalDate:
+      type: string
+      format: date
+      pattern: '^(?!0000)\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$'
+    AnnualTurnover:
+      type: number
+      format: double
+      minimum: 0
+      exclusiveMinimum: true
+      maximum: 1.7976931348623157e+308
+    OrganizationType:
+      type: string
+      enum:
+        - PUBLIC
+        - GOVERNMENT
+        - TRUST
+        - PRIVATE_LIMITED_COMPANY
     Coordinates:
       type: object
-      required: [x, y]
-      xml: {name: coordinates}
+      required:
+        - x
+        - y
+      xml:
+        name: coordinates
       properties:
-        x: {type: integer, format: int64, minimum: -9223372036854775808, maximum: 9223372036854775807}
-        y: {type: integer, format: int32, minimum: -2147483648, maximum: 2147483647}
+        x:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        y:
+          type: integer
+          format: int32
+          minimum: -2147483648
+          maximum: 2147483647
     Location:
       type: object
-      required: [x, y, name]
-      xml: {name: town}
+      required:
+        - x
+        - y
+        - name
+      xml:
+        name: town
       properties:
-        x: {type: integer, format: int64, minimum: -9223372036854775808, maximum: 9223372036854775807}
-        y: {type: integer, format: int64, minimum: -9223372036854775808, maximum: 9223372036854775807}
-        name: {type: string}
+        x:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        y:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        name:
+          type: string
     Address:
       type: object
-      required: [zipCode]
-      xml: {name: officialAddress}
+      required:
+        - zipCode
+      xml:
+        name: officialAddress
       properties:
-        zipCode: {type: string, maxLength: 18}
-        town: {$ref: '#/components/schemas/Location'}
+        zipCode:
+          type: string
+          maxLength: 18
+        town:
+          $ref: "#/components/schemas/Location"
     OrganizationWrite:
       type: object
-      required: [name, coordinates]
+      required:
+        - name
+        - coordinates
       additionalProperties: false
-      xml: {name: organization}
+      xml:
+        name: organization
       properties:
-        name: {type: string, minLength: 1}
-        coordinates: {$ref: '#/components/schemas/Coordinates'}
-        annualTurnover: {$ref: '#/components/schemas/AnnualTurnover'}
-        type: {$ref: '#/components/schemas/OrganizationType'}
-        officialAddress: {$ref: '#/components/schemas/Address'}
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        annualTurnover:
+          $ref: "#/components/schemas/AnnualTurnover"
+        type:
+          $ref: "#/components/schemas/OrganizationType"
+        officialAddress:
+          $ref: "#/components/schemas/Address"
     Organization:
       type: object
-      required: [id, name, coordinates, creationDate]
-      xml: {name: organization}
+      required:
+        - id
+        - name
+        - coordinates
+        - creationDate
+      xml:
+        name: organization
       properties:
-        id: {$ref: '#/components/schemas/PositiveId'}
-        name: {type: string, minLength: 1}
-        coordinates: {$ref: '#/components/schemas/Coordinates'}
-        creationDate: {$ref: '#/components/schemas/LocalDate'}
-        annualTurnover: {$ref: '#/components/schemas/AnnualTurnover'}
-        type: {$ref: '#/components/schemas/OrganizationType'}
-        officialAddress: {$ref: '#/components/schemas/Address'}
+        id:
+          $ref: "#/components/schemas/PositiveId"
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        creationDate:
+          $ref: "#/components/schemas/LocalDate"
+        annualTurnover:
+          $ref: "#/components/schemas/AnnualTurnover"
+        type:
+          $ref: "#/components/schemas/OrganizationType"
+        officialAddress:
+          $ref: "#/components/schemas/Address"
     OrganizationList:
       type: array
-      xml: {name: organizations, wrapped: true}
-      items: {$ref: '#/components/schemas/Organization'}
-    Count: {type: object, required: [count], xml: {name: countResult}, properties: {count: {type: integer, format: int64, minimum: 0}}}
-    Headcount: {type: object, required: [organizationId, employeeCount], xml: {name: headcount}, properties: {organizationId: {$ref: '#/components/schemas/PositiveId'}, employeeCount: {type: integer, format: int64, minimum: 0}}}
-    Acquisition: {type: object, required: [organization, acquiredId, employeeCount], xml: {name: acquisition}, properties: {organization: {$ref: '#/components/schemas/Organization'}, acquiredId: {$ref: '#/components/schemas/PositiveId'}, employeeCount: {type: integer, format: int64, minimum: 0}}}
-    Error: {type: object, required: [status, message], xml: {name: error}, properties: {status: {type: integer}, message: {type: string}}}
+      xml:
+        name: organizations
+        wrapped: true
+      items:
+        $ref: "#/components/schemas/Organization"
+    Count:
+      type: object
+      required:
+        - count
+      xml:
+        name: countResult
+      properties:
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+    Headcount:
+      type: object
+      required:
+        - organizationId
+        - employeeCount
+      xml:
+        name: headcount
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/PositiveId"
+        employeeCount:
+          type: integer
+          format: int64
+          minimum: 0
+    Acquisition:
+      type: object
+      required:
+        - organization
+        - acquiredId
+        - employeeCount
+      xml:
+        name: acquisition
+      properties:
+        organization:
+          $ref: "#/components/schemas/Organization"
+        acquiredId:
+          $ref: "#/components/schemas/PositiveId"
+        employeeCount:
+          type: integer
+          format: int64
+          minimum: 0
+    Error:
+      type: object
+      required:
+        - status
+        - message
+      xml:
+        name: error
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
   parameters:
-    OrganizationId: {name: id, in: path, required: true, description: ID организации, schema: {$ref: '#/components/schemas/PositiveId'}}
-    OrganizationTypePath: {name: type, in: path, required: true, description: Тип организации, schema: {$ref: '#/components/schemas/OrganizationType'}}
-    Page: {name: page, in: query, description: Номер страницы, schema: {type: integer, minimum: 1, default: 1}}
-    Size: {name: size, in: query, description: Размер страницы, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
-    Sort: {name: sort, in: query, style: form, explode: false, description: Поля через запятую, schema: {type: array, uniqueItems: true, default: [id], items: {type: string, enum: [id, '-id', name, '-name', coordinates.x, '-coordinates.x', coordinates.y, '-coordinates.y', creationDate, '-creationDate', annualTurnover, '-annualTurnover', type, '-type', officialAddress.zipCode, '-officialAddress.zipCode', officialAddress.town.x, '-officialAddress.town.x', officialAddress.town.y, '-officialAddress.town.y', officialAddress.town.name, '-officialAddress.town.name']}}}
-    FilterId: {name: id, in: query, schema: {$ref: '#/components/schemas/PositiveId'}}
-    FilterName: {name: name, in: query, schema: {type: string}}
-    FilterCoordinatesX: {name: coordinates.x, in: query, schema: {type: integer, format: int64}}
-    FilterCoordinatesY: {name: coordinates.y, in: query, schema: {type: integer, format: int32}}
-    FilterCreationDate: {name: creationDate, in: query, schema: {$ref: '#/components/schemas/LocalDate'}}
-    FilterAnnualTurnover: {name: annualTurnover, in: query, schema: {$ref: '#/components/schemas/AnnualTurnover'}}
-    FilterAnnualTurnoverIsNull: {name: annualTurnover.isNull, in: query, schema: {type: boolean}}
-    FilterType: {name: type, in: query, schema: {$ref: '#/components/schemas/OrganizationType'}}
-    FilterTypeIsNull: {name: type.isNull, in: query, schema: {type: boolean}}
-    FilterZipCode: {name: officialAddress.zipCode, in: query, schema: {type: string, maxLength: 18}}
-    FilterTownX: {name: officialAddress.town.x, in: query, schema: {type: integer, format: int64}}
-    FilterTownY: {name: officialAddress.town.y, in: query, schema: {type: integer, format: int64}}
-    FilterTownName: {name: officialAddress.town.name, in: query, schema: {type: string}}
-    FilterAddressIsNull: {name: officialAddress.isNull, in: query, schema: {type: boolean}}
-    FilterTownIsNull: {name: officialAddress.town.isNull, in: query, schema: {type: boolean}}
-  requestBodies:
-    OrganizationInput:
+    OrganizationId:
+      name: id
+      in: path
       required: true
-      description: Организация в XML без id и creationDate
+      description: ID организации
+      schema:
+        $ref: "#/components/schemas/PositiveId"
+    OrganizationTypePath:
+      name: type
+      in: path
+      required: true
+      description: Тип организации
+      schema:
+        $ref: "#/components/schemas/OrganizationType"
+    Page:
+      name: page
+      in: query
+      description: Номер страницы
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      description: Размер страницы
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      style: form
+      explode: false
+      description: Поля через запятую
+      schema:
+        type: array
+        uniqueItems: true
+        default:
+          - id
+        items:
+          type: string
+          enum:
+            - id
+            - "-id"
+            - name
+            - "-name"
+            - coordinates.x
+            - "-coordinates.x"
+            - coordinates.y
+            - "-coordinates.y"
+            - creationDate
+            - "-creationDate"
+            - annualTurnover
+            - "-annualTurnover"
+            - type
+            - "-type"
+            - officialAddress.zipCode
+            - "-officialAddress.zipCode"
+            - officialAddress.town.x
+            - "-officialAddress.town.x"
+            - officialAddress.town.y
+            - "-officialAddress.town.y"
+            - officialAddress.town.name
+            - "-officialAddress.town.name"
+    Filter:
+      name: filter
+      in: query
+      style: form
+      explode: false
+      description: |
+        Фильтры через запятую в формате поле:оператор:значение.
+        Операторы: eq, ne, gt, gte, lt, lte, contains, startsWith, in, isNull.
+        Для in значения разделяются знаком |. Пример:
+        name:contains:Ромашка,annualTurnover:gte:1000,annualTurnover:lte:5000,type:in:PUBLIC|TRUST
+      schema:
+        type: array
+        items:
+          type: string
+      example:
+        - "name:contains:ООО"
+        - "annualTurnover:gte:1000"
+        - "annualTurnover:lte:5000"
+        - "type:in:PUBLIC|TRUST"
+  requestBodies:
+    CreateOrganizationInput:
+      required: true
+      description: Данные новой организации
       content:
         application/xml:
-          schema: {$ref: '#/components/schemas/OrganizationWrite'}
+          schema:
+            $ref: "#/components/schemas/OrganizationWrite"
           examples:
             example:
-              value: '<organization><name>Ромашка</name><coordinates><x>10</x><y>20</y></coordinates><annualTurnover>1500.5</annualTurnover><type>PUBLIC</type></organization>'
+              value: |
+                <organization>
+                  <name>Ромашка</name>
+                  <coordinates>
+                    <x>10</x>
+                    <y>20</y>
+                  </coordinates>
+                  <annualTurnover>1500.5</annualTurnover>
+                  <type>PUBLIC</type>
+                </organization>
+    UpdateOrganizationInput:
+      required: true
+      description: Новые значения полей организации
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/OrganizationWrite"
+          examples:
+            example:
+              value: |
+                <organization>
+                  <name>Новое название</name>
+                  <coordinates>
+                    <x>15</x>
+                    <y>25</y>
+                  </coordinates>
+                  <annualTurnover>2000</annualTurnover>
+                  <type>PRIVATE_LIMITED_COMPANY</type>
+                </organization>
   responses:
-    OrganizationCreated: {description: Организация создана, content: {application/xml: {schema: {$ref: '#/components/schemas/Organization'}}}}
-    OrganizationResult: {description: Организация, content: {application/xml: {schema: {$ref: '#/components/schemas/Organization'}}}}
+    OrganizationCreated:
+      description: Организация создана
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Organization"
+    OrganizationResult:
+      description: Организация
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Organization"
     OrganizationPage:
       description: Страница организаций
       headers:
-        X-Total-Count: {description: Общее количество, schema: {type: integer, minimum: 0}}
-        X-Page: {description: Номер страницы, schema: {type: integer, minimum: 1}}
-        X-Page-Size: {description: Размер страницы, schema: {type: integer, minimum: 1}}
-      content: {application/xml: {schema: {$ref: '#/components/schemas/OrganizationList'}}}
-    CountResult: {description: Количество, content: {application/xml: {schema: {$ref: '#/components/schemas/Count'}}}}
-    HeadcountResult: {description: Количество сотрудников, content: {application/xml: {schema: {$ref: '#/components/schemas/Headcount'}}}}
-    AcquisitionResult: {description: Результат поглощения, content: {application/xml: {schema: {$ref: '#/components/schemas/Acquisition'}}}}
-    BadRequest: {description: Некорректный запрос, content: {application/xml: {schema: {$ref: '#/components/schemas/Error'}}}}
-    NotFound: {description: Организация не найдена, content: {application/xml: {schema: {$ref: '#/components/schemas/Error'}}}}
-    Conflict: {description: Конфликт операции, content: {application/xml: {schema: {$ref: '#/components/schemas/Error'}}}}
-    ValidationError: {description: Нарушены ограничения полей, content: {application/xml: {schema: {$ref: '#/components/schemas/Error'}}}}
-    BadGateway: {description: Первый сервис недоступен, content: {application/xml: {schema: {$ref: '#/components/schemas/Error'}}}}
+        X-Total-Count:
+          description: Общее количество
+          schema:
+            type: integer
+            minimum: 0
+        X-Page:
+          description: Номер страницы
+          schema:
+            type: integer
+            minimum: 1
+        X-Page-Size:
+          description: Размер страницы
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/OrganizationList"
+    CountResult:
+      description: Количество
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Count"
+    HeadcountResult:
+      description: Количество сотрудников
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Headcount"
+    AcquisitionResult:
+      description: Результат поглощения
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Acquisition"
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Организация не найдена
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Конфликт операции
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Нарушены ограничения полей
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadGateway:
+      description: Первый сервис недоступен
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
