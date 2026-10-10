@@ -45,7 +45,7 @@ Edits to the HTML, CSS, or YAML take effect after reloading the page.
   interpretation of the assignment's URL-only parameter requirement.
 - `OrganizationWrite` excludes generated `id` and `creationDate`; `Organization`
   requires them. PUT replaces mutable fields and preserves ID, creation date and
-  the employee list. Organization creation starts with an empty employee list.
+  employee assignments. Organization creation starts without employees.
 - Every required Java field is explicitly required in the API, including both
   primitive coordinates. `name` is nonempty, but not necessarily nonblank.
   ZIP codes and town names can be empty. Town coordinates can be zero or negative.
@@ -95,24 +95,26 @@ Edits to the HTML, CSS, or YAML take effect after reloading the page.
   and `in`; names support `eq`, `ne`, `contains`, `startsWith`, and `in`.
   Use `filter=organizationId:eq:1` to list an organization's employees or
   `filter=organizationId:isNull:true` to list unassigned employees.
-- `Organization.employees` is a required, read-only list of full Employee objects,
-  ordered by ID and derived from employee ownership. It is present as `<employees/>`
-  when empty. Change ownership through the employee API; each successful employee
-  mutation atomically updates ownership and the affected organizations' lists.
-  Deleting an employee removes it from its organization's list. Deleting an
-  organization with employees returns `409`; the emptiness check and deletion are
-  atomic. Delete-by-type follows the same rule for its selected organization.
+- Organization responses contain organization fields only, without embedded employees.
+  This applies to list, get, create, update, and acquisition responses. Fetch employees
+  separately with `GET /employees?filter=organizationId:eq:1&page=1&size=20`.
+  Employee ownership is stored in `Employee.organizationId` and changed atomically
+  through employee CRUD. Deleting an organization with employees returns `409`;
+  the emptiness check and deletion are atomic. Delete-by-type follows the same rule.
 - The manager hires an existing employee with
   `POST /orgmanager/hire/{id}?employeeId=123`: it reads the organization and employee,
   then updates that employee through `PUT /employees/{employeeId}`, preserving the
   name. An employee already at the destination is a successful no-op; an employee
   assigned elsewhere returns `409`. The response headcount comes from the
-  organization's employee list rather than a separate counter.
+  `X-Total-Count` header of `GET /employees?filter=organizationId:eq:{id}&page=1&size=1`,
+  fetching at most one employee rather than the entire workforce.
 - Acquisition reads both organizations, fetches **all** pages of the acquired
   organization's employees, and saves their IDs before moving anyone. It reads and
   updates each employee through the employee API, preserving employee IDs and names.
   It deletes the acquired organization only after all transfers, then reads the
-  acquirer's organization for the response. Other organization fields are preserved.
+  acquirer's compact organization for the response. The manager obtains the final
+  headcount from the same filtered employee page's `X-Total-Count` header. Other
+  organization fields are preserved.
 - Manager workflows use ordinary collection CRUD endpoints. There are no dedicated
   collection hiring or acquisition endpoints. The sequence is not atomic or
   isolated from concurrent writes: failures can leave some employees transferred.
@@ -136,7 +138,7 @@ The two exact manager routes are `POST /orgmanager/hire/{id}` and
 `acquise` is intentional. Employee CRUD operations are documented under
 the first service's Employees (`Сотрудники`) tag.
 
-An organization response includes employees in XML:
+An organization response stays compact, regardless of its employee count:
 
 ```xml
 <organization>
@@ -144,9 +146,6 @@ An organization response includes employees in XML:
   <name>Ромашка</name>
   <coordinates><x>10</x><y>20</y></coordinates>
   <creationDate>2026-10-10</creationDate>
-  <employees>
-    <employee><id>123</id><name>Иван Иванов</name><organizationId>1</organizationId></employee>
-  </employees>
 </organization>
 ```
 
@@ -260,7 +259,7 @@ coordinate returns `422`, identifying both fields:
 - Missing required XML bodies and malformed XML return `400`. For syntactically
   valid XML, reject missing required fields, invalid types/ranges/enums, unknown
   elements at any level, duplicate singleton elements, wrong roots, `xsi:nil`,
-  and generated/read-only fields such as `id`, `creationDate`, or `employees` with
+  and generated fields such as `id` or `creationDate` with
   `422`. Optional objects may be omitted; if present, their own required fields
   must be supplied. Existing rules allowing whitespace names and empty ZIP/town
   names remain unchanged. Calendar dates must be real dates in years 0001–9999.
