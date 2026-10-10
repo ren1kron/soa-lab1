@@ -4,11 +4,11 @@ info:
   title: Сервис организаций
   version: 1.0.0
   description: |-
-    Организации и сотрудники. Формат данных — XML
+    Организации и сотрудники. Формат данных – XML
 
-    - Неверные параметры URL, их повторы, неизвестные параметры запроса и отсутствие обязательного тела — 400. sort/filter передаются один раз, списком через запятую
-    - Некорректный XML — 400; неверный корень, поля, типы, повторы элементов, xsi:nil или поля только для чтения — 422 до изменений. Вложенные обязательные поля проверяются, если объект задан
-    - Числа соответствуют типам и диапазонам схем; double допускает дроби, но не NaN/бесконечности. Имена могут состоять из пробелов; zipCode и имя town могут быть пустыми
+    - Неверные параметры URL, их повторы, неизвестные параметры запроса и отсутствие обязательного тела – 400. sort/filter передаются один раз, списком через запятую
+    - Некорректный XML – 400. Неверный корень, поля, типы, повторы элементов, xsi:nil или поля только для чтения – 422 до изменений. Вложенные обязательные поля проверяются, если объект задан
+    - Числа соответствуют типам и диапазонам схем. double допускает дроби, но не NaN/бесконечности. Имена могут состоять из пробелов. zipCode и имя town могут быть пустыми
     - Ошибки используют Error. При 500 результат изменения может быть неизвестен: проверьте состояние перед повтором. Проверки выполняет сервер
 servers:
   - url: "{baseUrl}"
@@ -37,7 +37,7 @@ paths:
         '201':
           "$ref": "#/components/responses/OrganizationCreated"
         '400':
-          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины — в details"
+          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -62,7 +62,7 @@ paths:
         - Организации
       operationId: listOrganizations
       summary: Получить список организаций
-      description: Возвращает страницу организаций; условия filter объединяются через И
+      description: Возвращает страницу организаций. Условия filter объединяются через И
       parameters:
         - "$ref": "#/components/parameters/Page"
         - "$ref": "#/components/parameters/Size"
@@ -72,7 +72,7 @@ paths:
         '200':
           "$ref": "#/components/responses/OrganizationPage"
         '400':
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -119,7 +119,7 @@ paths:
         '200':
           "$ref": "#/components/responses/OrganizationResult"
         "400":
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -149,7 +149,7 @@ paths:
         '200':
           "$ref": "#/components/responses/OrganizationResult"
         '400':
-          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины — в details"
+          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -178,12 +178,12 @@ paths:
         - Организации
       operationId: deleteOrganization
       summary: Удалить организацию
-      description: Атомарно удаляет организацию без сотрудников. Иначе — 409 без изменений
+      description: Атомарно удаляет организацию без сотрудников. Иначе – 409 без изменений
       responses:
         '204':
           description: Организация удалена
         "400":
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -216,7 +216,7 @@ paths:
         '201':
           "$ref": "#/components/responses/EmployeeCreated"
         '400':
-          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины — в details"
+          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -253,7 +253,7 @@ paths:
         '200':
           "$ref": "#/components/responses/EmployeePage"
         '400':
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -300,7 +300,7 @@ paths:
         '200':
           "$ref": "#/components/responses/EmployeeResult"
         '400':
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -323,14 +323,14 @@ paths:
         - Сотрудники
       operationId: updateEmployee
       summary: Изменить сотрудника
-      description: Заменяет имя и organizationId, сохраняя ID. Перенос атомарно меняет работодателя; отсутствие organizationId снимает назначение. Ошибка валидации или неизвестный работодатель не меняют сотрудника
+      description: Заменяет имя и organizationId, сохраняя ID. Перенос атомарно меняет работодателя. Отсутствие organizationId снимает назначение. Ошибка валидации или неизвестный работодатель не меняют сотрудника
       requestBody:
         "$ref": "#/components/requestBodies/EmployeeInput"
       responses:
         '200':
           "$ref": "#/components/responses/EmployeeResult"
         '400':
-          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины — в details"
+          description: "Неверные параметры URL, отсутствующее тело или некорректный XML. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -364,7 +364,7 @@ paths:
         '204':
           description: Сотрудник удалён
         '400':
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -388,14 +388,14 @@ paths:
         - Дополнительные операции
       operationId: deleteOneOrganizationByType
       summary: Удалить одну организацию заданного типа
-      description: 'Выбирает любую организацию с указанным type и атомарно удаляет её, если сотрудников нет; иначе — 409. Автоматический повтор запрещён: он может выбрать другую организацию'
+      description: 'Выбирает любую организацию с указанным type и атомарно удаляет её, если сотрудников нет, иначе – 409. Автоматический повтор запрещён: он может выбрать другую организацию'
       parameters:
         - "$ref": "#/components/parameters/OrganizationTypePath"
       responses:
         '204':
           description: Организация удалена
         "400":
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -421,19 +421,19 @@ paths:
         - Дополнительные операции
       operationId: countOrganizationsByTypeGreaterThan
       summary: Посчитать организации с большим type
-      description: Считает организации с type выше порога по порядку типов; отсутствующие значения исключаются
+      description: Считает организации с type выше порога по порядку типов, отсутствующие значения исключаются
       parameters:
         - name: typeGreaterThan
           in: query
           required: true
-          description: Порог type по порядку типов; отсутствующие значения исключаются
+          description: Порог type по порядку типов, отсутствующие значения исключаются
           schema:
             $ref: "#/components/schemas/OrganizationType"
       responses:
         '200':
           "$ref": "#/components/responses/CountResult"
         '400':
-          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины — в details"
+          description: "Неверные, пропущенные или повторяющиеся параметры либо лишнее тело запроса. Поля и причины – в details"
           content:
             application/xml:
               schema:
@@ -455,7 +455,7 @@ components:
   schemas:
     EmployeeWrite:
       type: object
-      description: Отсутствие organizationId означает отсутствие работодателя и снимает назначение при PUT. Неизвестный работодатель — 404
+      description: Отсутствие organizationId означает отсутствие работодателя и снимает назначение при PUT. Неизвестный работодатель – 404
       additionalProperties: false
       required:
         - name
@@ -469,7 +469,7 @@ components:
           "$ref": "#/components/schemas/PositiveId"
     Employee:
       type: object
-      description: Сотрудник с уникальным ID. Без работодателя organizationId отсутствует; одновременно возможна только одна организация
+      description: Сотрудник с уникальным ID. Без работодателя organizationId отсутствует. Одновременно возможна только одна организация
       required:
         - id
         - name
@@ -633,7 +633,7 @@ components:
     Error:
       type: object
       additionalProperties: false
-      description: "code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422; без привязки к полю — пустой список. Внутренние сообщения не раскрываются"
+      description: "code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422. Без привязки к полю – пустой список. Внутренние сообщения не раскрываются"
       required:
         - code
         - message
@@ -657,7 +657,7 @@ components:
     ErrorDetail:
       type: object
       additionalProperties: false
-      description: location — источник, field — путь поля (coordinates.x, sort[1]) или $ для тела. Индексы с нуля; code — причина, message — нарушенное правило
+      description: location – источник, field – путь поля (coordinates.x, sort[1]) или $ для тела. Индексы с нуля. code – причина, message – нарушенное правило
       required:
         - location
         - field
@@ -696,9 +696,9 @@ components:
       style: form
       explode: false
       description: |-
-        Допустимые поля через запятую; один ведущий минус задаёт убывание
+        Допустимые поля через запятую. Один ведущий минус задаёт убывание
         Плюс, пробелы, пустые элементы и повтор поля в любом направлении запрещены: 400 INVALID_SORT с sort[n]
-        По умолчанию id; отсутствующие значения идут последними, ID по возрастанию завершает сортировку, если не задан явно
+        По умолчанию id. Отсутствующие значения идут последними, ID по возрастанию завершает сортировку, если не задан явно
       schema:
         type: array
         uniqueItems: true
@@ -720,13 +720,13 @@ components:
       style: form
       explode: false
       description: |-
-        Условия поле:оператор:значение через запятую объединяются через И; регистр учитывается
+        Условия поле:оператор:значение через запятую объединяются через И. Регистр учитывается
         - Числа, даты и типы организаций: eq, ne, gt, gte, lt, lte, in
         - Строки: eq, ne, contains, startsWith, in
-        - Необязательные поля и их потомки: isNull:true/false; объекты — только isNull
-        in разделяет непустые значения через |; contains/startsWith требуют непустую строку. Типы и ограничения — как в схемах; сравнения исключают отсутствующие значения
-        Двоеточия после оператора входят в значение; запятые и | не экранируются. Ошибки — 400 INVALID_FILTER с filter[n]
-        Поля: id, name, organizationId; isNull — только для organizationId
+        - Необязательные поля и их потомки: isNull:true/false. Объекты – только isNull
+        in разделяет непустые значения через |. contains/startsWith требуют непустую строку. Типы и ограничения – как в схемах. Сравнения исключают отсутствующие значения
+        Двоеточия после оператора входят в значение. Запятые и | не экранируются. Ошибки – 400 INVALID_FILTER с filter[n]
+        Поля: id, name, organizationId. isNull – только для organizationId
       schema:
         type: array
         items:
@@ -752,7 +752,7 @@ components:
     Page:
       name: page
       in: query
-      description: Целое >= 1. По умолчанию 1 при отсутствии; неверное значение — 400
+      description: Целое >= 1. По умолчанию 1 при отсутствии. Неверное значение – 400
       schema:
         type: integer
         minimum: 1
@@ -760,7 +760,7 @@ components:
     Size:
       name: size
       in: query
-      description: Целое от 1 до 100. По умолчанию 20 при отсутствии; неверное значение — 400
+      description: Целое от 1 до 100. По умолчанию 20 при отсутствии. Неверное значение – 400
       schema:
         type: integer
         minimum: 1
@@ -772,9 +772,9 @@ components:
       style: form
       explode: false
       description: |-
-        Допустимые поля через запятую; один ведущий минус задаёт убывание
+        Допустимые поля через запятую. Один ведущий минус задаёт убывание
         Плюс, пробелы, пустые элементы и повтор поля в любом направлении запрещены: 400 INVALID_SORT с sort[n]
-        По умолчанию id; отсутствующие значения идут последними, ID по возрастанию завершает сортировку, если не задан явно
+        По умолчанию id. Отсутствующие значения идут последними, ID по возрастанию завершает сортировку, если не задан явно
       schema:
         type: array
         uniqueItems: true
@@ -812,12 +812,12 @@ components:
       style: form
       explode: false
       description: |-
-        Условия поле:оператор:значение через запятую объединяются через И; регистр учитывается
+        Условия поле:оператор:значение через запятую объединяются через И. Регистр учитывается
         - Числа, даты и типы организаций: eq, ne, gt, gte, lt, lte, in
         - Строки: eq, ne, contains, startsWith, in
-        - Необязательные поля и их потомки: isNull:true/false; объекты — только isNull
-        in разделяет непустые значения через |; contains/startsWith требуют непустую строку. Типы и ограничения — как в схемах; сравнения исключают отсутствующие значения
-        Двоеточия после оператора входят в значение; запятые и | не экранируются. Ошибки — 400 INVALID_FILTER с filter[n]
+        - Необязательные поля и их потомки: isNull:true/false. Объекты – только isNull
+        in разделяет непустые значения через |. contains/startsWith требуют непустую строку. Типы и ограничения – как в схемах. Сравнения исключают отсутствующие значения
+        Двоеточия после оператора входят в значение. Запятые и | не экранируются. Ошибки – 400 INVALID_FILTER с filter[n]
         Поля: скалярные из Sort, officialAddress и officialAddress.town (isNull). employees не фильтруется
       schema:
         type: array
@@ -964,7 +964,7 @@ components:
           schema:
             "$ref": "#/components/schemas/Count"
     NotFound:
-      description: Организация, сотрудник или работодатель не найдены. Неверный формат ID — 400
+      description: Организация, сотрудник или работодатель не найдены. Неверный формат ID – 400
       content:
         application/xml:
           schema:
@@ -982,7 +982,7 @@ components:
             nonemptyOrganization:
               $ref: "#/components/examples/nonemptyOrganization"
     ValidationError:
-      description: "Корректный XML нарушает схему тела. Поля и причины указаны в details; изменения не применяются"
+      description: "Корректный XML нарушает схему тела. Поля и причины указаны в details. Изменения не применяются"
       content:
         application/xml:
           schema:
@@ -1012,7 +1012,7 @@ components:
             unsupportedAccept:
               $ref: "#/components/examples/unsupportedAccept"
     UnsupportedMediaType:
-      description: Требуется application/xml; Content-Encoding должен отсутствовать или быть identity
+      description: Требуется application/xml. Content-Encoding должен отсутствовать или быть identity
       content:
         application/xml:
           schema:
@@ -1023,7 +1023,7 @@ components:
             unsupportedContentEncoding:
               $ref: "#/components/examples/unsupportedContentEncoding"
     InternalServerError:
-      description: Внутренняя ошибка. Результат изменения может быть неизвестен; перед повтором проверьте состояние
+      description: Внутренняя ошибка. Результат изменения может быть неизвестен. Перед повтором проверьте состояние
       content:
         application/xml:
           schema:
@@ -1032,7 +1032,7 @@ components:
             internalError:
               $ref: "#/components/examples/internalError"
     EmployeeValidationError:
-      description: "Корректный XML нарушает схему сотрудника. Поля и причины указаны в details; изменения не применяются"
+      description: "Корректный XML нарушает схему сотрудника. Поля и причины указаны в details. Изменения не применяются"
       content:
         application/xml:
           schema:
@@ -1474,11 +1474,11 @@ components:
           </details>
         </error>
     unsupportedAccept:
-      summary: Доступный формат ответа — application/xml
+      summary: Доступный формат ответа – application/xml
       value: |
         <error>
           <code>NOT_ACCEPTABLE</code>
-          <message>Доступный формат ответа — application/xml</message>
+          <message>Доступный формат ответа – application/xml</message>
           <details>
             <detail>
               <location>header</location>
