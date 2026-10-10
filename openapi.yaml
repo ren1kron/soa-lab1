@@ -211,127 +211,6 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
-  "/organizations/by-type/{type}":
-    delete:
-      tags:
-        - Дополнительные операции
-      operationId: deleteOneOrganizationByType
-      summary: Удалить одну организацию заданного типа
-      description: 'Выбирает любую одну организацию с указанным type. Если у выбранной организации есть сотрудники, возвращает 409 без удаления. Проверка и удаление атомарны. Не повторяйте запрос автоматически: следующий запрос может выбрать другую организацию.'
-      parameters:
-        - "$ref": "#/components/parameters/OrganizationTypePath"
-      responses:
-        '204':
-          description: Организация удалена
-        "400":
-          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
-          content:
-            application/xml:
-              schema:
-                $ref: "#/components/schemas/Error"
-              examples:
-                unknownQueryParameter:
-                  $ref: "#/components/examples/unknownQueryParameter"
-                invalid_type:
-                  $ref: "#/components/examples/invalid_type"
-                unexpectedBody:
-                  $ref: "#/components/examples/unexpectedBody"
-        '404':
-          "$ref": "#/components/responses/NotFound"
-        "406":
-          $ref: "#/components/responses/NotAcceptable"
-        '409':
-          "$ref": "#/components/responses/Conflict"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-  "/organizations/count-by-type-greater-than/{type}":
-    get:
-      tags:
-        - Дополнительные операции
-      operationId: countOrganizationsByTypeGreaterThan
-      summary: Посчитать организации с большим type
-      description: Порядок типов совпадает с порядком значений enum.
-      parameters:
-        - "$ref": "#/components/parameters/OrganizationTypePath"
-      responses:
-        '200':
-          "$ref": "#/components/responses/CountResult"
-        '400':
-          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
-          content:
-            application/xml:
-              schema:
-                $ref: "#/components/schemas/Error"
-              examples:
-                unknownQueryParameter:
-                  $ref: "#/components/examples/unknownQueryParameter"
-                invalid_type:
-                  $ref: "#/components/examples/invalid_type"
-                unexpectedBody:
-                  $ref: "#/components/examples/unexpectedBody"
-        "406":
-          $ref: "#/components/responses/NotAcceptable"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-  "/organizations/by-annual-turnover-less-than/{annualTurnover}":
-    get:
-      tags:
-        - Дополнительные операции
-      operationId: listOrganizationsByAnnualTurnoverLessThan
-      summary: Получить организации с меньшим оборотом
-      description: Значения null не входят в результат.
-      parameters:
-        - name: annualTurnover
-          in: path
-          required: true
-          schema:
-            type: number
-            format: double
-            minimum: -1.7976931348623157e+308
-            maximum: 1.7976931348623157e+308
-        - "$ref": "#/components/parameters/Page"
-        - "$ref": "#/components/parameters/Size"
-        - "$ref": "#/components/parameters/Sort"
-      responses:
-        '200':
-          "$ref": "#/components/responses/OrganizationPage"
-        '400':
-          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
-          content:
-            application/xml:
-              schema:
-                $ref: "#/components/schemas/Error"
-              examples:
-                unknownQueryParameter:
-                  $ref: "#/components/examples/unknownQueryParameter"
-                unknownSortField:
-                  $ref: "#/components/examples/unknownSortField"
-                malformedSort:
-                  $ref: "#/components/examples/malformedSort"
-                emptySortTerm:
-                  $ref: "#/components/examples/emptySortTerm"
-                duplicateSort:
-                  $ref: "#/components/examples/duplicateSort"
-                conflictingSort:
-                  $ref: "#/components/examples/conflictingSort"
-                invalidPagination:
-                  $ref: "#/components/examples/invalidPagination"
-                repeatedSort:
-                  $ref: "#/components/examples/repeatedSort"
-                invalidTurnover:
-                  $ref: "#/components/examples/invalidTurnover"
-                unexpectedBody:
-                  $ref: "#/components/examples/unexpectedBody"
-        "406":
-          $ref: "#/components/responses/NotAcceptable"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/employees":
     post:
       tags:
@@ -515,6 +394,79 @@ paths:
                   $ref: "#/components/examples/unexpectedBody"
         '404':
           "$ref": "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  "/organizations/type/{type}":
+    delete:
+      tags:
+        - Дополнительные операции
+      operationId: deleteOneOrganizationByType
+      summary: Удалить одну организацию заданного типа
+      description: 'Выбирает любую одну организацию с указанным type. Если у выбранной организации есть сотрудники, возвращает 409 без удаления. Проверка и удаление атомарны. Не повторяйте запрос автоматически: следующий запрос может выбрать другую организацию.'
+      parameters:
+        - "$ref": "#/components/parameters/OrganizationTypePath"
+      responses:
+        '204':
+          description: Организация удалена
+        "400":
+          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
+          content:
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unknownQueryParameter:
+                  $ref: "#/components/examples/unknownQueryParameter"
+                invalid_type:
+                  $ref: "#/components/examples/invalid_type"
+                unexpectedBody:
+                  $ref: "#/components/examples/unexpectedBody"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  "/organizations/count":
+    get:
+      tags:
+        - Дополнительные операции
+      operationId: countOrganizationsByTypeGreaterThan
+      summary: Посчитать организации с большим type
+      description: Порядок типов совпадает с порядком значений enum.
+      parameters:
+        - name: typeGreaterThan
+          in: query
+          required: true
+          description: Посчитать организации, чей type строго больше указанного значения в порядке enum. Значения null исключаются.
+          schema:
+            $ref: "#/components/schemas/OrganizationType"
+      responses:
+        '200':
+          "$ref": "#/components/responses/CountResult"
+        '400':
+          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
+          content:
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unknownQueryParameter:
+                  $ref: "#/components/examples/unknownQueryParameter"
+                unexpectedBody:
+                  $ref: "#/components/examples/unexpectedBody"
+                invalid_typeGreaterThan:
+                  $ref: "#/components/examples/invalid_typeGreaterThan"
+                missing_typeGreaterThan:
+                  $ref: "#/components/examples/missing_typeGreaterThan"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
@@ -1405,8 +1357,8 @@ components:
           <message>Неверный порог оборота.</message>
           <details>
             <detail>
-              <location>path</location>
-              <field>annualTurnover</field>
+              <location>query</location>
+              <field>lessThan</field>
               <code>INVALID_TYPE</code>
               <message>Порог должен быть конечным числом double; NaN и бесконечности не допускаются. Нулевой или отрицательный конечный порог допустим и даёт пустой результат.</message>
             </detail>
@@ -1696,6 +1648,54 @@ components:
               <field>$</field>
               <code>INVALID_FORMAT</code>
               <message>Ожидается корневой элемент employee; другие корни не допускаются.</message>
+            </detail>
+          </details>
+        </error>
+    invalid_typeGreaterThan:
+      summary: Неверный параметр typeGreaterThan.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неверный параметр typeGreaterThan.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>typeGreaterThan</field>
+              <code>INVALID_ENUM</code>
+              <message>Допустимы только PUBLIC, GOVERNMENT, TRUST, PRIVATE_LIMITED_COMPANY.</message>
+            </detail>
+          </details>
+        </error>
+    missing_typeGreaterThan:
+      summary: Отсутствует обязательный параметр typeGreaterThan.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Отсутствует обязательный параметр typeGreaterThan.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>typeGreaterThan</field>
+              <code>REQUIRED</code>
+              <message>Передайте обязательный query-параметр typeGreaterThan.</message>
+            </detail>
+          </details>
+        </error>
+    missing_lessThan:
+      summary: Отсутствует обязательный параметр lessThan.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Отсутствует обязательный параметр lessThan.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>lessThan</field>
+              <code>REQUIRED</code>
+              <message>Передайте обязательный query-параметр lessThan.</message>
             </detail>
           </details>
         </error>

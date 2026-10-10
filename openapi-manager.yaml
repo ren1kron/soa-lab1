@@ -78,7 +78,7 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
         '504':
           "$ref": "#/components/responses/GatewayTimeout"
-  "/orgmanager/acquise/{acquirer-id}/{acquired-id}":
+  "/orgmanager/acquise/{acquirerId}/{acquiredId}":
     post:
       tags:
         - Менеджер организаций
@@ -87,17 +87,17 @@ paths:
       description: |-
         Поглощение выполняется через обычный API первого сервиса.
         1. GET /organizations/{id} читает обе организации; одинаковые ID возвращают 409.
-        2. GET /employees?filter=organizationId:eq:{acquired-id} получает все страницы
+        2. GET /employees?filter=organizationId:eq:{acquiredId} получает все страницы
            сотрудников и сохраняет их ID до изменения принадлежности, чтобы не пропустить
            сотрудников при сдвиге страниц. Менеджер сохраняет этот список для восстановления.
         3. Для каждого ID GET /employees/{employeeId} читает актуальные данные,
-           PUT /employees/{employeeId} сохраняет имя и назначает organizationId=acquirer-id.
+           PUT /employees/{employeeId} сохраняет имя и назначает organizationId=acquirerId.
            Уже перенесённые сотрудники пропускаются. Изменённая посторонним клиентом
            принадлежность или удалённый сотрудник останавливают процесс с 409.
-        4. Только после переноса всех сотрудников DELETE /organizations/{acquired-id}
+        4. Только после переноса всех сотрудников DELETE /organizations/{acquiredId}
            удаляет поглощённую организацию. Если в ней остались или появились сотрудники,
            первый сервис возвращает 409; организация сохраняется.
-        5. GET /organizations/{acquirer-id} возвращает итоговую организацию;
+        5. GET /organizations/{acquirerId} возвращает итоговую организацию;
            employeeCount равен длине её employees. Остальные поля поглотителя сохраняются.
         Перенос сохраняет ID и имя каждого сотрудника, не удаляет и не создаёт сотрудников.
         Вся последовательность не атомарна. При ошибке уже перенесённые сотрудники остаются
@@ -110,12 +110,12 @@ paths:
 
         Проверка клиентских ID и query-параметров выполняется до изменений. Ошибки upstream 400/415/422 для сформированного менеджером запроса означают 500 INTEGRATION_FAILURE; валидный upstream 500 остаётся 500, некорректный ответ — 502, временная недоступность/upstream 503 — 503, timeout — 504. При 5xx требуется сверка состояния, без автоматических повторов изменений.
       parameters:
-        - name: acquirer-id
+        - name: acquirerId
           in: path
           required: true
           schema:
             "$ref": "#/components/schemas/PositiveId"
-        - name: acquired-id
+        - name: acquiredId
           in: path
           required: true
           schema:
@@ -132,10 +132,10 @@ paths:
               examples:
                 unknownQueryParameter:
                   $ref: "#/components/examples/unknownQueryParameter"
-                invalid_acquirer-id:
-                  $ref: "#/components/examples/invalid_acquirer-id"
-                invalid_acquired-id:
-                  $ref: "#/components/examples/invalid_acquired-id"
+                invalid_acquirerId:
+                  $ref: "#/components/examples/invalid_acquirerId"
+                invalid_acquiredId:
+                  $ref: "#/components/examples/invalid_acquiredId"
                 unexpectedBody:
                   $ref: "#/components/examples/unexpectedBody"
         '404':
@@ -562,33 +562,33 @@ components:
             </detail>
           </details>
         </error>
-    invalid_acquirer-id:
-      summary: Неверный параметр acquirer-id.
+    invalid_acquirerId:
+      summary: Неверный параметр acquirerId.
       value: |
         <error>
           <status>400</status>
           <code>INVALID_REQUEST</code>
-          <message>Неверный параметр acquirer-id.</message>
+          <message>Неверный параметр acquirerId.</message>
           <details>
             <detail>
               <location>path</location>
-              <field>acquirer-id</field>
+              <field>acquirerId</field>
               <code>INVALID_TYPE</code>
               <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
             </detail>
           </details>
         </error>
-    invalid_acquired-id:
-      summary: Неверный параметр acquired-id.
+    invalid_acquiredId:
+      summary: Неверный параметр acquiredId.
       value: |
         <error>
           <status>400</status>
           <code>INVALID_REQUEST</code>
-          <message>Неверный параметр acquired-id.</message>
+          <message>Неверный параметр acquiredId.</message>
           <details>
             <detail>
               <location>path</location>
-              <field>acquired-id</field>
+              <field>acquiredId</field>
               <code>INVALID_TYPE</code>
               <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
             </detail>

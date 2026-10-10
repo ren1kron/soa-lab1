@@ -132,7 +132,7 @@ Edits to the HTML, CSS, or YAML take effect after reloading the page.
   idempotent semantics.
 
 The two exact manager routes are `POST /orgmanager/hire/{id}` and
-`POST /orgmanager/acquise/{acquirer-id}/{acquired-id}`. The required spelling
+`POST /orgmanager/acquise/{acquirerId}/{acquiredId}`. The required spelling
 `acquise` is intentional. Employee CRUD operations are documented under
 the first service's Employees (`Сотрудники`) tag.
 
@@ -149,6 +149,24 @@ An organization response includes employees in XML:
   </employees>
 </organization>
 ```
+
+## Additional operation URLs
+
+Use short resource paths and query parameters for comparisons:
+
+| Operation | Request |
+| --- | --- |
+| Delete one organization matching a type | `DELETE /organizations/type/{type}` |
+| Count organizations whose type is greater in enum order | `GET /organizations/count?typeGreaterThan=PUBLIC` |
+| List organizations with lower annual turnover | `GET /organizations/turnover?lessThan=1000` |
+| Acquire an organization | `POST /orgmanager/acquise/{acquirerId}/{acquiredId}` |
+
+`typeGreaterThan` and `lessThan` are required query parameters. The turnover
+route still accepts `page`, `size`, and `sort`; it does not accept `filter`.
+Missing comparison parameters return `400` with the parameter name in `details`.
+The previous longer collection URLs are replaced, without compatibility aliases.
+Manager acquisition placeholders use camelCase; their positions in the actual
+URL are unchanged. Update clients using the renamed collection routes.
 
 ## Errors and validation
 
@@ -322,7 +340,54 @@ and the `Content-Type` and `Accept` headers. Expose `Location`, `X-Total-Count`,
 `X-Page`, `X-Page-Size`, and `Retry-After` to the browser. An HTTPS documentation site needs
 HTTPS backend URLs to avoid mixed-content blocking. No authentication is specified.
 
-## Run on Helios through an SSH tunnel
+## Deploy on se.ifmo.ru
+
+Run the commands below **on the remote server**. This example publishes the
+site in `~/public_html/soa-lab1/`.
+
+1. Create the destination directory:
+
+   ```sh
+   mkdir -p "$HOME/public_html/soa-lab1"
+   ```
+
+2. Upload these files from the repository root directly into that directory,
+   preserving the complete `vendor/` directory:
+
+   ```text
+   ~/public_html/soa-lab1/
+   ├── index.html
+   ├── manager.html
+   ├── openapi.yaml
+   ├── openapi-manager.yaml
+   ├── swagger.css
+   └── vendor/              (entire directory, including license notices)
+   ```
+
+   No build is required. You do not need to upload `node_modules/`, `dist/`,
+   `.git/`, or test results.
+
+3. Set access permissions after uploading. Directories need `755`; static files
+   need `644`. If you receive **403 Forbidden**, repeat this step, including the
+   permissions for your home directory and `public_html`:
+
+   ```sh
+   chmod 755 "$HOME" "$HOME/public_html"
+   find "$HOME/public_html/soa-lab1" -type d -exec chmod 755 {} \;
+   find "$HOME/public_html/soa-lab1" -type f -exec chmod 644 {} \;
+   ```
+
+4. Open `https://se.ifmo.ru/~YOUR_LOGIN/soa-lab1/`, replacing `YOUR_LOGIN` with
+   your home directory name, for example `s264452`. The directory URL opens
+   `index.html`; the manager page is at
+   `https://se.ifmo.ru/~YOUR_LOGIN/soa-lab1/manager.html`.
+   Check that both pages load their specifications and that navigation works.
+   For updates, upload the changed files to the same locations and reload.
+
+The server serves these static files directly; no Python HTTP server or SSH
+port-forward is needed for this deployment.
+
+## Run on Helios through an SSH tunnel (alternative)
 
 On your local machine, from this repository's root directory, copy the page,
 specification, stylesheet, and complete `vendor/` directory to your existing
