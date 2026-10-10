@@ -263,28 +263,14 @@ components:
     Error:
       type: object
       additionalProperties: false
-      description: "status совпадает с HTTP-кодом; code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422; без привязки к полю — пустой список. Внутренние сообщения не раскрываются"
+      description: "code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422; без привязки к полю — пустой список. Внутренние сообщения не раскрываются"
       required:
-        - status
         - code
         - message
         - details
       xml:
         name: error
       properties:
-        status:
-          type: integer
-          enum:
-            - 400
-            - 404
-            - 406
-            - 409
-            - 415
-            - 422
-            - 500
-            - 502
-            - 503
-            - 504
         code:
           type: string
           minLength: 1
@@ -434,7 +420,6 @@ components:
       summary: Неизвестный параметр запроса
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неизвестный параметр запроса</message>
           <details>
@@ -442,7 +427,7 @@ components:
               <location>query</location>
               <field>unexpected</field>
               <code>UNKNOWN_FIELD</code>
-              <message>Параметр unexpected не поддерживается этой операцией; удалите его</message>
+              <message>Эта операция не поддерживает параметр unexpected. Удалите его из запроса</message>
             </detail>
           </details>
         </error>
@@ -450,7 +435,6 @@ components:
       summary: Неверный параметр id
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр id</message>
           <details>
@@ -458,7 +442,7 @@ components:
               <location>path</location>
               <field>id</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -466,7 +450,6 @@ components:
       summary: Неверный параметр employeeId
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр employeeId</message>
           <details>
@@ -474,7 +457,7 @@ components:
               <location>query</location>
               <field>employeeId</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -482,7 +465,6 @@ components:
       summary: Отсутствует обязательный параметр employeeId
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Отсутствует обязательный параметр employeeId</message>
           <details>
@@ -498,7 +480,6 @@ components:
       summary: Неожиданное тело запроса
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Операция не принимает тело запроса</message>
           <details>
@@ -506,7 +487,7 @@ components:
               <location>body</location>
               <field>$</field>
               <code>UNEXPECTED_BODY</code>
-              <message>Удалите тело запроса; передавайте только объявленные параметры пути и query</message>
+              <message>Эта операция не принимает тело запроса. Передайте данные в параметрах пути или строки запроса</message>
             </detail>
           </details>
         </error>
@@ -514,7 +495,6 @@ components:
       summary: Неверный параметр acquirerId
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр acquirerId</message>
           <details>
@@ -522,7 +502,7 @@ components:
               <location>path</location>
               <field>acquirerId</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -530,7 +510,6 @@ components:
       summary: Неверный параметр acquiredId
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр acquiredId</message>
           <details>
@@ -538,7 +517,7 @@ components:
               <location>path</location>
               <field>acquiredId</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -546,7 +525,6 @@ components:
       summary: Организация с указанным ID не найдена
       value: |
         <error>
-          <status>404</status>
           <code>NOT_FOUND</code>
           <message>Организация с указанным ID не найдена</message>
           <details/>
@@ -555,7 +533,6 @@ components:
       summary: Нельзя удалить организацию, пока в ней есть сотрудники
       value: |
         <error>
-          <status>409</status>
           <code>ORGANIZATION_NOT_EMPTY</code>
           <message>Нельзя удалить организацию, пока в ней есть сотрудники</message>
           <details/>
@@ -564,7 +541,6 @@ components:
       summary: Сотрудник уже принадлежит другой организации
       value: |
         <error>
-          <status>409</status>
           <code>EMPLOYEE_ALREADY_ASSIGNED</code>
           <message>Сотрудник уже принадлежит другой организации</message>
           <details/>
@@ -573,43 +549,38 @@ components:
       summary: Поглощающая и поглощаемая организации должны различаться
       value: |
         <error>
-          <status>409</status>
           <code>SELF_ACQUISITION</code>
           <message>Поглощающая и поглощаемая организации должны различаться</message>
           <details/>
         </error>
     concurrentChange:
-      summary: Принадлежность сотрудника изменилась во время поглощения; требуется сверка состояния
+      summary: Работодатель сотрудника изменился во время поглощения. Проверьте его текущее назначение
       value: |
         <error>
-          <status>409</status>
           <code>CONCURRENT_MODIFICATION</code>
-          <message>Принадлежность сотрудника изменилась во время поглощения; требуется сверка состояния</message>
+          <message>Работодатель сотрудника изменился во время поглощения. Проверьте его текущее назначение</message>
           <details/>
         </error>
     invalidUpstreamResponse:
-      summary: Ответ первого сервиса не соответствует ожидаемому контракту; проверьте состояние перед повтором изменения
+      summary: Первый сервис вернул некорректный ответ. Проверьте состояние данных, прежде чем повторять изменение
       value: |
         <error>
-          <status>502</status>
           <code>INVALID_UPSTREAM_RESPONSE</code>
-          <message>Ответ первого сервиса не соответствует ожидаемому контракту; проверьте состояние перед повтором изменения</message>
+          <message>Первый сервис вернул некорректный ответ. Проверьте состояние данных, прежде чем повторять изменение</message>
           <details/>
         </error>
     upstreamTimeout:
-      summary: Истекло время ожидания первого сервиса; результат последнего изменения неизвестен
+      summary: Первый сервис не ответил вовремя. Неизвестно, применилось ли последнее изменение
       value: |
         <error>
-          <status>504</status>
           <code>UPSTREAM_TIMEOUT</code>
-          <message>Истекло время ожидания первого сервиса; результат последнего изменения неизвестен</message>
+          <message>Первый сервис не ответил вовремя. Неизвестно, применилось ли последнее изменение</message>
           <details/>
         </error>
     unsupportedAccept:
       summary: Доступный формат ответа — application/xml
       value: |
         <error>
-          <status>406</status>
           <code>NOT_ACCEPTABLE</code>
           <message>Доступный формат ответа — application/xml</message>
           <details>
@@ -622,47 +593,42 @@ components:
           </details>
         </error>
     internalError:
-      summary: Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние
+      summary: Не удалось завершить запрос. Если вы изменяли данные, проверьте, применились ли изменения
       value: |
         <error>
-          <status>500</status>
           <code>INTERNAL_ERROR</code>
-          <message>Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние</message>
+          <message>Не удалось завершить запрос. Если вы изменяли данные, проверьте, применились ли изменения</message>
           <details/>
         </error>
     integrationFailure:
       summary: Менеджер сформировал запрос, не соответствующий контракту первого сервиса
       value: |
         <error>
-          <status>500</status>
           <code>INTEGRATION_FAILURE</code>
           <message>Менеджер сформировал запрос, не соответствующий контракту первого сервиса</message>
           <details/>
         </error>
     upstreamInternalError:
-      summary: Первый сервис сообщил внутреннюю ошибку; при изменении данных проверьте текущее состояние
+      summary: В первом сервисе произошла ошибка. Если вы изменяли данные, проверьте, применились ли изменения
       value: |
         <error>
-          <status>500</status>
           <code>UPSTREAM_INTERNAL_ERROR</code>
-          <message>Первый сервис сообщил внутреннюю ошибку; при изменении данных проверьте текущее состояние</message>
+          <message>В первом сервисе произошла ошибка. Если вы изменяли данные, проверьте, применились ли изменения</message>
           <details/>
         </error>
     serviceUnavailable:
-      summary: Сервис временно недоступен; повторите чтение позже
+      summary: Сервис временно недоступен. Попробуйте получить данные позже
       value: |
         <error>
-          <status>503</status>
           <code>SERVICE_UNAVAILABLE</code>
-          <message>Сервис временно недоступен; повторите чтение позже</message>
+          <message>Сервис временно недоступен. Попробуйте получить данные позже</message>
           <details/>
         </error>
     dependencyUnavailable:
-      summary: Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние
+      summary: Не удалось связаться с первым сервисом. Проверьте состояние данных, прежде чем повторять изменение
       value: |
         <error>
-          <status>503</status>
           <code>DEPENDENCY_UNAVAILABLE</code>
-          <message>Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние</message>
+          <message>Не удалось связаться с первым сервисом. Проверьте состояние данных, прежде чем повторять изменение</message>
           <details/>
         </error>

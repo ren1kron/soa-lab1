@@ -169,9 +169,9 @@ URL are unchanged. Update clients using the renamed collection routes.
 
 ## Errors and validation
 
-Both services use the same XML error envelope. `status` equals the HTTP status,
-`code` is a stable machine-readable error identifier, and `message` explains the
-failure. `details` is always present. For `400` and `422`, it lists every
+Both services use the same XML error envelope. The HTTP response carries the
+status; the body contains `code` (a stable machine-readable error identifier),
+`message`, and `details`. `details` is always present. For `400` and `422`, it lists every
 independently detectable violation; errors without a particular invalid field
 use `<details/>`. Each detail identifies the input source (`path`, `query`,
 `header`, or `body`), the field, a stable reason code, and the violated rule.
@@ -182,7 +182,6 @@ For example, `GET /employees?sort=name,-name` returns `400`:
 
 ```xml
 <error>
-  <status>400</status>
   <code>INVALID_SORT</code>
   <message>Противоречащие направления сортировки.</message>
   <details>
@@ -201,7 +200,6 @@ coordinate returns `422`, identifying both fields:
 
 ```xml
 <error>
-  <status>422</status>
   <code>VALIDATION_FAILED</code>
   <message>Поля организации не прошли проверку.</message>
   <details>
@@ -290,7 +288,7 @@ The meanings follow [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#secti
 | `422 Unprocessable Content` | Well-formed XML violates body-field constraints. | The four collection operations accepting XML bodies. |
 | `500 Internal Server Error` | Unexpected internal or integration failure. | All operations. |
 | `502 Bad Gateway` | The manager received an invalid upstream response. | Both manager routes only. |
-| `503 Service Unavailable` | Temporary overload, maintenance, or dependency unavailability. | All operations. |
+| `503 Service Unavailable` | The manager is temporarily unavailable or cannot access its required dependency. | Both manager routes only. |
 | `504 Gateway Timeout` | The manager timed out waiting for the collection service. | Both manager routes only. |
 
 `406` errors are described using XML; if the client excludes XML in `Accept`,
@@ -307,7 +305,7 @@ The manager validates client IDs locally, then translates dependency failures:
 | `400`, `415`, or `422` rejecting a manager-generated request | `500 INTEGRATION_FAILURE`; the client did not supply that body. |
 | Valid upstream `500` | Sanitized `500 UPSTREAM_INTERNAL_ERROR`. |
 | Invalid XML, wrong response media type, or missing required response fields | `502 INVALID_UPSTREAM_RESPONSE`. |
-| Temporarily unavailable dependency or upstream `503` | `503 DEPENDENCY_UNAVAILABLE` or `503 SERVICE_UNAVAILABLE`. |
+| Temporarily unavailable dependency | `503 DEPENDENCY_UNAVAILABLE` or `503 SERVICE_UNAVAILABLE`. |
 | Upstream timeout | `504 UPSTREAM_TIMEOUT`. |
 
 The manager has no client-body `422` response. On mutations, `500`, `502`, `503`,

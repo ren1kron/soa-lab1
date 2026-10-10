@@ -9,7 +9,7 @@ info:
     - Неверные параметры URL, их повторы, неизвестные параметры запроса и отсутствие обязательного тела — 400. sort/filter передаются один раз, списком через запятую
     - Некорректный XML — 400; неверный корень, поля, типы, повторы элементов, xsi:nil или поля только для чтения — 422 до изменений. Вложенные обязательные поля проверяются, если объект задан
     - Числа соответствуют типам и диапазонам схем; double допускает дроби, но не NaN/бесконечности. Имена могут состоять из пробелов; zipCode и имя town могут быть пустыми
-    - Ошибки используют Error. При 500/503 результат изменения может быть неизвестен: проверьте состояние перед повтором. Проверки выполняет сервер
+    - Ошибки используют Error. При 500 результат изменения может быть неизвестен: проверьте состояние перед повтором. Проверки выполняет сервер
 servers:
   - url: "{baseUrl}"
     description: Сервис организаций
@@ -57,8 +57,6 @@ paths:
           "$ref": "#/components/responses/ValidationError"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     get:
       tags:
         - Организации
@@ -108,8 +106,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/organizations/{id}":
     parameters:
       - "$ref": "#/components/parameters/OrganizationId"
@@ -141,8 +137,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     put:
       tags:
         - Организации
@@ -179,8 +173,6 @@ paths:
           "$ref": "#/components/responses/ValidationError"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     delete:
       tags:
         - Организации
@@ -211,8 +203,6 @@ paths:
           "$ref": "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/employees":
     post:
       tags:
@@ -248,8 +238,6 @@ paths:
           $ref: "#/components/responses/EmployeeValidationError"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     get:
       tags:
         - Сотрудники
@@ -299,8 +287,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/employees/{employeeId}":
     parameters:
       - "$ref": "#/components/parameters/EmployeeId"
@@ -332,8 +318,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     put:
       tags:
         - Сотрудники
@@ -370,8 +354,6 @@ paths:
           $ref: "#/components/responses/EmployeeValidationError"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
     delete:
       tags:
         - Сотрудники
@@ -400,8 +382,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/organizations/type/{type}":
     delete:
       tags:
@@ -435,8 +415,6 @@ paths:
           "$ref": "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
   "/organizations/count":
     get:
       tags:
@@ -473,8 +451,6 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
 components:
   schemas:
     EmployeeWrite:
@@ -657,28 +633,14 @@ components:
     Error:
       type: object
       additionalProperties: false
-      description: "status совпадает с HTTP-кодом; code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422; без привязки к полю — пустой список. Внутренние сообщения не раскрываются"
+      description: "code стабилен, message объясняет ошибку. details содержит все обнаруженные нарушения для 400/422; без привязки к полю — пустой список. Внутренние сообщения не раскрываются"
       required:
-        - status
         - code
         - message
         - details
       xml:
         name: error
       properties:
-        status:
-          type: integer
-          enum:
-            - 400
-            - 404
-            - 406
-            - 409
-            - 415
-            - 422
-            - 500
-            - 502
-            - 503
-            - 504
         code:
           type: string
           minLength: 1
@@ -1069,24 +1031,6 @@ components:
           examples:
             internalError:
               $ref: "#/components/examples/internalError"
-    ServiceUnavailable:
-      description: "Временная перегрузка, обслуживание или недоступность зависимости. Retry-After не разрешает автоматически повторять изменения"
-      headers:
-        Retry-After:
-          description: Известная задержка в секундах. Перед повтором изменения проверьте состояние
-          schema:
-            type: integer
-            minimum: 0
-          example: 30
-      content:
-        application/xml:
-          schema:
-            $ref: "#/components/schemas/Error"
-          examples:
-            serviceUnavailable:
-              $ref: "#/components/examples/serviceUnavailable"
-            dependencyUnavailable:
-              $ref: "#/components/examples/dependencyUnavailable"
     EmployeeValidationError:
       description: "Корректный XML нарушает схему сотрудника. Поля и причины указаны в details; изменения не применяются"
       content:
@@ -1109,7 +1053,6 @@ components:
       summary: Неизвестный параметр запроса
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неизвестный параметр запроса</message>
           <details>
@@ -1117,7 +1060,7 @@ components:
               <location>query</location>
               <field>unexpected</field>
               <code>UNKNOWN_FIELD</code>
-              <message>Параметр unexpected не поддерживается этой операцией; удалите его</message>
+              <message>Эта операция не поддерживает параметр unexpected. Удалите его из запроса</message>
             </detail>
           </details>
         </error>
@@ -1125,7 +1068,6 @@ components:
       summary: Отсутствует обязательное XML-тело
       value: |
         <error>
-          <status>400</status>
           <code>MISSING_BODY</code>
           <message>Отсутствует обязательное XML-тело</message>
           <details>
@@ -1141,7 +1083,6 @@ components:
       summary: XML-тело не удалось разобрать
       value: |
         <error>
-          <status>400</status>
           <code>MALFORMED_XML</code>
           <message>XML-тело не удалось разобрать</message>
           <details>
@@ -1157,7 +1098,6 @@ components:
       summary: Неизвестное поле сортировки
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_SORT</code>
           <message>Неизвестное поле сортировки</message>
           <details>
@@ -1165,7 +1105,7 @@ components:
               <location>query</location>
               <field>sort[1]</field>
               <code>UNKNOWN_FIELD</code>
-              <message>Поле salary в sort=name,salary не поддерживается; используйте поля из enum параметра sort</message>
+              <message>По полю salary сортировать нельзя. Выберите поле из списка допустимых значений sort</message>
             </detail>
           </details>
         </error>
@@ -1173,7 +1113,6 @@ components:
       summary: Некорректное направление сортировки
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_SORT</code>
           <message>Некорректное направление сортировки</message>
           <details>
@@ -1189,7 +1128,6 @@ components:
       summary: Пустой элемент сортировки
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_SORT</code>
           <message>Пустой элемент сортировки</message>
           <details>
@@ -1197,7 +1135,7 @@ components:
               <location>query</location>
               <field>sort[1]</field>
               <code>INVALID_FORMAT</code>
-              <message>В sort=name,,id второй элемент пуст; удалите лишнюю запятую</message>
+              <message>В sort=name,,id пропущено поле после первой запятой. Удалите лишнюю запятую</message>
             </detail>
           </details>
         </error>
@@ -1205,7 +1143,6 @@ components:
       summary: Поле сортировки повторяется
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_SORT</code>
           <message>Поле сортировки повторяется</message>
           <details>
@@ -1213,7 +1150,7 @@ components:
               <location>query</location>
               <field>sort[1]</field>
               <code>DUPLICATE_SORT</code>
-              <message>В sort=name,name поле name указано дважды; оставьте одно вхождение</message>
+              <message>Поле name указано в sort дважды. Оставьте его только один раз</message>
             </detail>
           </details>
         </error>
@@ -1221,7 +1158,6 @@ components:
       summary: Противоречащие направления сортировки
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_SORT</code>
           <message>Противоречащие направления сортировки</message>
           <details>
@@ -1229,7 +1165,7 @@ components:
               <location>query</location>
               <field>sort[1]</field>
               <code>CONFLICTING_SORT</code>
-              <message>В sort=name,-name поле name указано в обоих направлениях; выберите одно</message>
+              <message>Для поля name указаны два направления сортировки. Выберите name или -name</message>
             </detail>
           </details>
         </error>
@@ -1237,7 +1173,6 @@ components:
       summary: Неверные параметры пагинации
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверные параметры пагинации</message>
           <details>
@@ -1259,7 +1194,6 @@ components:
       summary: Оператор фильтра не подходит полю
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_FILTER</code>
           <message>Оператор фильтра не подходит полю</message>
           <details>
@@ -1267,7 +1201,7 @@ components:
               <location>query</location>
               <field>filter[0]</field>
               <code>UNKNOWN_OPERATOR</code>
-              <message>В name:gt:Иван оператор gt недоступен для name; используйте eq, ne, contains, startsWith или in</message>
+              <message>Оператор gt не подходит для поля name. Используйте eq, ne, contains, startsWith или in</message>
             </detail>
           </details>
         </error>
@@ -1275,7 +1209,6 @@ components:
       summary: Некорректный фильтр
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_FILTER</code>
           <message>Некорректный фильтр</message>
           <details>
@@ -1291,7 +1224,6 @@ components:
       summary: Значение фильтра имеет неверный тип
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_FILTER</code>
           <message>Значение фильтра имеет неверный тип</message>
           <details>
@@ -1307,7 +1239,6 @@ components:
       summary: Параметр sort передан несколько раз
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Параметр sort передан несколько раз</message>
           <details>
@@ -1323,7 +1254,6 @@ components:
       summary: Неожиданное тело запроса
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Операция не принимает тело запроса</message>
           <details>
@@ -1331,7 +1261,7 @@ components:
               <location>body</location>
               <field>$</field>
               <code>UNEXPECTED_BODY</code>
-              <message>Удалите тело запроса; передавайте только объявленные параметры пути и query</message>
+              <message>Эта операция не принимает тело запроса. Передайте данные в параметрах пути или строки запроса</message>
             </detail>
           </details>
         </error>
@@ -1339,7 +1269,6 @@ components:
       summary: Неверный параметр id
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр id</message>
           <details>
@@ -1347,7 +1276,7 @@ components:
               <location>path</location>
               <field>id</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -1355,7 +1284,6 @@ components:
       summary: Неверный параметр type
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр type</message>
           <details>
@@ -1371,7 +1299,6 @@ components:
       summary: Неверный порог оборота
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный порог оборота</message>
           <details>
@@ -1379,7 +1306,7 @@ components:
               <location>query</location>
               <field>lessThan</field>
               <code>INVALID_TYPE</code>
-              <message>Порог должен быть конечным числом double; NaN и бесконечности не допускаются. Нулевой или отрицательный конечный порог допустим и даёт пустой результат</message>
+              <message>Укажите конечное число. NaN и бесконечность недопустимы. Нулевой или отрицательный порог вернёт пустой список</message>
             </detail>
           </details>
         </error>
@@ -1387,7 +1314,6 @@ components:
       summary: Отсутствует обязательное XML-тело
       value: |
         <error>
-          <status>400</status>
           <code>MISSING_BODY</code>
           <message>Отсутствует обязательное XML-тело</message>
           <details>
@@ -1403,7 +1329,6 @@ components:
       summary: Неверный параметр employeeId
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр employeeId</message>
           <details>
@@ -1411,7 +1336,7 @@ components:
               <location>path</location>
               <field>employeeId</field>
               <code>INVALID_TYPE</code>
-              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID</message>
+              <message>ID должен быть целым числом от 1 до 9223372036854775807. Значение abc не подходит</message>
             </detail>
           </details>
         </error>
@@ -1419,7 +1344,6 @@ components:
       summary: Организация с указанным ID не найдена
       value: |
         <error>
-          <status>404</status>
           <code>NOT_FOUND</code>
           <message>Организация с указанным ID не найдена</message>
           <details/>
@@ -1428,7 +1352,6 @@ components:
       summary: Нельзя удалить организацию, пока в ней есть сотрудники
       value: |
         <error>
-          <status>409</status>
           <code>ORGANIZATION_NOT_EMPTY</code>
           <message>Нельзя удалить организацию, пока в ней есть сотрудники</message>
           <details/>
@@ -1437,7 +1360,6 @@ components:
       summary: Несколько полей организации не прошли проверку
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Несколько полей организации не прошли проверку</message>
           <details>
@@ -1465,7 +1387,6 @@ components:
       summary: Неверная вложенная координата
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Неверная вложенная координата</message>
           <details>
@@ -1473,7 +1394,7 @@ components:
               <location>body</location>
               <field>officialAddress.town.x</field>
               <code>INVALID_TYPE</code>
-              <message>x должен быть десятичным целым int64; дробные значения не допускаются</message>
+              <message>Координата x должна быть целым числом в диапазоне int64. Дробные значения недопустимы</message>
             </detail>
           </details>
         </error>
@@ -1481,7 +1402,6 @@ components:
       summary: Неизвестный тип организации
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Неизвестный тип организации</message>
           <details>
@@ -1489,7 +1409,7 @@ components:
               <location>body</location>
               <field>type</field>
               <code>INVALID_ENUM</code>
-              <message>Допустимы PUBLIC, GOVERNMENT, TRUST, PRIVATE_LIMITED_COMPANY; регистр учитывается</message>
+              <message>Выберите PUBLIC, GOVERNMENT, TRUST или PRIVATE_LIMITED_COMPANY. Используйте заглавные буквы</message>
             </detail>
           </details>
         </error>
@@ -1497,7 +1417,6 @@ components:
       summary: Передано поле, управляемое сервером
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Передано поле, управляемое сервером</message>
           <details>
@@ -1505,7 +1424,7 @@ components:
               <location>body</location>
               <field>id</field>
               <code>READ_ONLY_FIELD</code>
-              <message>ID генерируется сервером; удалите id из тела создания или замены</message>
+              <message>Сервер назначает ID автоматически. Удалите поле id из тела запроса</message>
             </detail>
           </details>
         </error>
@@ -1513,7 +1432,6 @@ components:
       summary: Неизвестное поле тела
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Неизвестное поле тела</message>
           <details>
@@ -1521,7 +1439,7 @@ components:
               <location>body</location>
               <field>nickname</field>
               <code>UNKNOWN_FIELD</code>
-              <message>Поле nickname не входит в схему запроса; удалите элемент</message>
+              <message>Поле nickname не поддерживается. Удалите его из тела запроса</message>
             </detail>
           </details>
         </error>
@@ -1529,7 +1447,6 @@ components:
       summary: Одиночное поле повторяется
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Одиночное поле повторяется</message>
           <details>
@@ -1545,7 +1462,6 @@ components:
       summary: Неверный корневой элемент
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Неверный корневой элемент</message>
           <details>
@@ -1553,7 +1469,7 @@ components:
               <location>body</location>
               <field>$</field>
               <code>INVALID_FORMAT</code>
-              <message>Ожидается корневой элемент organization; другие корни не допускаются</message>
+              <message>Корневой элемент XML должен называться organization</message>
             </detail>
           </details>
         </error>
@@ -1561,7 +1477,6 @@ components:
       summary: Доступный формат ответа — application/xml
       value: |
         <error>
-          <status>406</status>
           <code>NOT_ACCEPTABLE</code>
           <message>Доступный формат ответа — application/xml</message>
           <details>
@@ -1577,7 +1492,6 @@ components:
       summary: Тип тела запроса не поддерживается
       value: |
         <error>
-          <status>415</status>
           <code>UNSUPPORTED_MEDIA_TYPE</code>
           <message>Тип тела запроса не поддерживается</message>
           <details>
@@ -1585,7 +1499,7 @@ components:
               <location>header</location>
               <field>Content-Type</field>
               <code>UNSUPPORTED_MEDIA_TYPE</code>
-              <message>Используйте Content-Type: application/xml; application/json не поддерживается</message>
+              <message>Отправьте XML с заголовком Content-Type: application/xml. Формат application/json не поддерживается</message>
             </detail>
           </details>
         </error>
@@ -1593,7 +1507,6 @@ components:
       summary: Кодирование тела запроса не поддерживается
       value: |
         <error>
-          <status>415</status>
           <code>UNSUPPORTED_MEDIA_TYPE</code>
           <message>Кодирование тела запроса не поддерживается</message>
           <details>
@@ -1606,37 +1519,17 @@ components:
           </details>
         </error>
     internalError:
-      summary: Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние
+      summary: Не удалось завершить запрос. Если вы изменяли данные, проверьте, применились ли изменения
       value: |
         <error>
-          <status>500</status>
           <code>INTERNAL_ERROR</code>
-          <message>Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние</message>
-          <details/>
-        </error>
-    serviceUnavailable:
-      summary: Сервис временно недоступен; повторите чтение позже
-      value: |
-        <error>
-          <status>503</status>
-          <code>SERVICE_UNAVAILABLE</code>
-          <message>Сервис временно недоступен; повторите чтение позже</message>
-          <details/>
-        </error>
-    dependencyUnavailable:
-      summary: Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние
-      value: |
-        <error>
-          <status>503</status>
-          <code>DEPENDENCY_UNAVAILABLE</code>
-          <message>Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние</message>
+          <message>Не удалось завершить запрос. Если вы изменяли данные, проверьте, применились ли изменения</message>
           <details/>
         </error>
     invalidEmployee:
       summary: Поля сотрудника не прошли проверку
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Поля сотрудника не прошли проверку</message>
           <details>
@@ -1650,7 +1543,7 @@ components:
               <location>body</location>
               <field>organizationId</field>
               <code>OUT_OF_RANGE</code>
-              <message>organizationId должен быть целым числом от 1 до 9223372036854775807; для отсутствия работодателя опустите элемент</message>
+              <message>organizationId должен быть целым числом от 1 до 9223372036854775807. Если работодателя нет, не передавайте этот элемент</message>
             </detail>
           </details>
         </error>
@@ -1658,7 +1551,6 @@ components:
       summary: Неверный корневой элемент
       value: |
         <error>
-          <status>422</status>
           <code>VALIDATION_FAILED</code>
           <message>Неверный корневой элемент</message>
           <details>
@@ -1666,7 +1558,7 @@ components:
               <location>body</location>
               <field>$</field>
               <code>INVALID_FORMAT</code>
-              <message>Ожидается корневой элемент employee; другие корни не допускаются</message>
+              <message>Корневой элемент XML должен называться employee</message>
             </detail>
           </details>
         </error>
@@ -1674,7 +1566,6 @@ components:
       summary: Неверный параметр typeGreaterThan
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Неверный параметр typeGreaterThan</message>
           <details>
@@ -1690,7 +1581,6 @@ components:
       summary: Отсутствует обязательный параметр typeGreaterThan
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Отсутствует обязательный параметр typeGreaterThan</message>
           <details>
@@ -1706,7 +1596,6 @@ components:
       summary: Отсутствует обязательный параметр lessThan
       value: |
         <error>
-          <status>400</status>
           <code>INVALID_REQUEST</code>
           <message>Отсутствует обязательный параметр lessThan</message>
           <details>
