@@ -1,0 +1,720 @@
+---
+openapi: 3.0.3
+info:
+  title: Менеджер организаций
+  version: 1.0.0
+  description: |-
+    Спецификация сервиса менеджера организаций. Данные передаются в XML.
+
+    Клиентские ID проверяются как положительные десятичные int64 от 1 до 9223372036854775807. Неизвестные query-параметры, повторяющиеся параметры и отсутствующий employeeId возвращают 400 до изменений. Некорректный ID — 400; корректный, но неизвестный ID — 404. Неожиданное тело запроса возвращает 400. Все ошибки используют Error: status, code, message и details с location, field, code и message. Менеджер не принимает XML-тела клиента и не возвращает 422. Проверки описаны контрактом и реализуются backend-сервисом.
+
+    Менеджер сначала проверяет ID и query-параметры клиента (400), затем вызывает первый сервис. Ожидаемые доменные 404/409 передаются в едином формате. Если первый сервис отклоняет сформированный менеджером запрос с 400/415/422, это внутренняя ошибка интеграции 500 (INTEGRATION_FAILURE), не ошибка клиента. Валидный upstream 500 передаётся как очищенный 500 (UPSTREAM_INTERNAL_ERROR); некорректный ответ — 502, временная недоступность зависимости или upstream 503 — 503, upstream timeout — 504. Менеджер не раскрывает внутренние сообщения зависимостей. При 500/502/503/504 результат последнего изменения может быть неизвестен и поглощение может быть частичным; перед продолжением требуется сверка через GET, без автоматических повторов изменений.
+servers:
+  - url: "{baseUrl}"
+    description: Менеджер организаций
+    variables:
+      baseUrl:
+        default: http://localhost:8081
+tags:
+  - name: Менеджер организаций
+    description: Второй сервис
+paths:
+  "/orgmanager/hire/{id}":
+    post:
+      tags:
+        - Менеджер организаций
+      operationId: managerHireEmployee
+      summary: Нанять сотрудника
+      description: |-
+        Нанимает существующего сотрудника. Через GET /organizations/{id} проверяет
+        организацию, через GET /employees/{employeeId} читает сотрудника, затем
+        PUT /employees/{employeeId} сохраняет его имя и назначает organizationId=id.
+        Если сотрудник уже в этой организации, возвращает текущий результат без изменения.
+        Если он принадлежит другой организации, возвращает 409.
+        Количество сотрудников определяется из employees в GET /organizations/{id}.
+        Составной вызов не является транзакцией; конкурентные изменения могут изменить результат.
+        При 500/502/503/504 состояние могло измениться; перед повтором нужно прочитать сотрудника.
+
+        Проверка клиентских ID и query-параметров выполняется до изменений. Ошибки upstream 400/415/422 для сформированного менеджером запроса означают 500 INTEGRATION_FAILURE; валидный upstream 500 остаётся 500, некорректный ответ — 502, временная недоступность/upstream 503 — 503, timeout — 504. При 5xx требуется сверка состояния, без автоматических повторов изменений.
+      parameters:
+        - "$ref": "#/components/parameters/OrganizationId"
+        - name: employeeId
+          in: query
+          required: true
+          description: ID существующего сотрудника без работодателя
+          schema:
+            "$ref": "#/components/schemas/PositiveId"
+      responses:
+        '200':
+          "$ref": "#/components/responses/HeadcountResult"
+        '400':
+          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
+          content:
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unknownQueryParameter:
+                  $ref: "#/components/examples/unknownQueryParameter"
+                invalid_id:
+                  $ref: "#/components/examples/invalid_id"
+                invalid_employeeId:
+                  $ref: "#/components/examples/invalid_employeeId"
+                missing_employeeId:
+                  $ref: "#/components/examples/missing_employeeId"
+                unexpectedBody:
+                  $ref: "#/components/examples/unexpectedBody"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        '502':
+          "$ref": "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        '504':
+          "$ref": "#/components/responses/GatewayTimeout"
+  "/orgmanager/acquise/{acquirer-id}/{acquired-id}":
+    post:
+      tags:
+        - Менеджер организаций
+      operationId: managerAcquireOrganization
+      summary: Выполнить поглощение
+      description: |-
+        Поглощение выполняется через обычный API первого сервиса.
+        1. GET /organizations/{id} читает обе организации; одинаковые ID возвращают 409.
+        2. GET /employees?filter=organizationId:eq:{acquired-id} получает все страницы
+           сотрудников и сохраняет их ID до изменения принадлежности, чтобы не пропустить
+           сотрудников при сдвиге страниц. Менеджер сохраняет этот список для восстановления.
+        3. Для каждого ID GET /employees/{employeeId} читает актуальные данные,
+           PUT /employees/{employeeId} сохраняет имя и назначает organizationId=acquirer-id.
+           Уже перенесённые сотрудники пропускаются. Изменённая посторонним клиентом
+           принадлежность или удалённый сотрудник останавливают процесс с 409.
+        4. Только после переноса всех сотрудников DELETE /organizations/{acquired-id}
+           удаляет поглощённую организацию. Если в ней остались или появились сотрудники,
+           первый сервис возвращает 409; организация сохраняется.
+        5. GET /organizations/{acquirer-id} возвращает итоговую организацию;
+           employeeCount равен длине её employees. Остальные поля поглотителя сохраняются.
+        Перенос сохраняет ID и имя каждого сотрудника, не удаляет и не создаёт сотрудников.
+        Вся последовательность не атомарна. При ошибке уже перенесённые сотрудники остаются
+        в организации-поглотителе; откат не обещается. При 500/502/503/504 результат последнего
+        запроса неизвестен. Менеджер сверяет состояние через GET и продолжает по сохранённому
+        списку, пропуская перенесённых; запросы изменения автоматически не повторяются.
+        Если удаление уже произошло, менеджер проверяет перенесённых сотрудников и завершает
+        сохранённую операцию. Новый запрос без сохранённой операции при отсутствующей
+        организации возвращает 404. Конкурентные изменения не изолированы.
+
+        Проверка клиентских ID и query-параметров выполняется до изменений. Ошибки upstream 400/415/422 для сформированного менеджером запроса означают 500 INTEGRATION_FAILURE; валидный upstream 500 остаётся 500, некорректный ответ — 502, временная недоступность/upstream 503 — 503, timeout — 504. При 5xx требуется сверка состояния, без автоматических повторов изменений.
+      parameters:
+        - name: acquirer-id
+          in: path
+          required: true
+          schema:
+            "$ref": "#/components/schemas/PositiveId"
+        - name: acquired-id
+          in: path
+          required: true
+          schema:
+            "$ref": "#/components/schemas/PositiveId"
+      responses:
+        '200':
+          "$ref": "#/components/responses/AcquisitionResult"
+        '400':
+          description: "Неверные path/query-параметры, пропущенный обязательный query-параметр или неожиданное тело. details указывает поля и причины. Неизвестный путь или отсутствующий сегмент пути не совпадает с маршрутом и возвращает 404."
+          content:
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unknownQueryParameter:
+                  $ref: "#/components/examples/unknownQueryParameter"
+                invalid_acquirer-id:
+                  $ref: "#/components/examples/invalid_acquirer-id"
+                invalid_acquired-id:
+                  $ref: "#/components/examples/invalid_acquired-id"
+                unexpectedBody:
+                  $ref: "#/components/examples/unexpectedBody"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        '502':
+          "$ref": "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        '504':
+          "$ref": "#/components/responses/GatewayTimeout"
+components:
+  schemas:
+    Employee:
+      type: object
+      description: Сотрудник с глобально уникальным сгенерированным ID. organizationId отсутствует у сотрудника без работодателя. Сотрудник принадлежит не более чем одной организации.
+      required:
+        - id
+        - name
+      xml:
+        name: employee
+      properties:
+        id:
+          "$ref": "#/components/schemas/PositiveId"
+        name:
+          type: string
+          minLength: 1
+        organizationId:
+          "$ref": "#/components/schemas/PositiveId"
+    PositiveId:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9223372036854775807
+    LocalDate:
+      type: string
+      format: date
+      pattern: "^(?!0000)\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+    AnnualTurnover:
+      type: number
+      format: double
+      minimum: 0
+      exclusiveMinimum: true
+      maximum: 1.7976931348623157e+308
+    OrganizationType:
+      type: string
+      enum:
+        - PUBLIC
+        - GOVERNMENT
+        - TRUST
+        - PRIVATE_LIMITED_COMPANY
+    Coordinates:
+      type: object
+      required:
+        - x
+        - y
+      xml:
+        name: coordinates
+      properties:
+        x:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        y:
+          type: integer
+          format: int32
+          minimum: -2147483648
+          maximum: 2147483647
+      additionalProperties: false
+    Location:
+      type: object
+      required:
+        - x
+        - y
+        - name
+      xml:
+        name: town
+      properties:
+        x:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        y:
+          type: integer
+          format: int64
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        name:
+          type: string
+      additionalProperties: false
+    Address:
+      type: object
+      required:
+        - zipCode
+      xml:
+        name: officialAddress
+      properties:
+        zipCode:
+          type: string
+          maxLength: 18
+        town:
+          "$ref": "#/components/schemas/Location"
+      additionalProperties: false
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+        - coordinates
+        - creationDate
+        - employees
+      xml:
+        name: organization
+      properties:
+        employees:
+          type: array
+          readOnly: true
+          description: Все сотрудники с organizationId этой организации, упорядоченные по ID. Всегда присутствует; пустой список записывается как <employees/>. Изменяется через API сотрудников.
+          xml:
+            name: employees
+            wrapped: true
+          items:
+            "$ref": "#/components/schemas/Employee"
+        id:
+          "$ref": "#/components/schemas/PositiveId"
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          "$ref": "#/components/schemas/Coordinates"
+        creationDate:
+          "$ref": "#/components/schemas/LocalDate"
+        annualTurnover:
+          "$ref": "#/components/schemas/AnnualTurnover"
+        type:
+          "$ref": "#/components/schemas/OrganizationType"
+        officialAddress:
+          "$ref": "#/components/schemas/Address"
+    Headcount:
+      type: object
+      required:
+        - organizationId
+        - employeeCount
+      xml:
+        name: headcount
+      properties:
+        organizationId:
+          "$ref": "#/components/schemas/PositiveId"
+        employeeCount:
+          type: integer
+          format: int64
+          minimum: 0
+    Acquisition:
+      type: object
+      required:
+        - organization
+        - acquiredId
+        - employeeCount
+      xml:
+        name: acquisition
+      properties:
+        organization:
+          "$ref": "#/components/schemas/Organization"
+        acquiredId:
+          "$ref": "#/components/schemas/PositiveId"
+        employeeCount:
+          type: integer
+          format: int64
+          minimum: 0
+    Error:
+      type: object
+      additionalProperties: false
+      description: "Единый XML-формат ошибок обоих сервисов. status совпадает с HTTP-кодом; code — стабильный код ошибки; message — понятное описание. details всегда присутствует: все независимо обнаруженные нарушения для 400/422, пустой список для ошибок без привязки к полю. Не включайте стеки вызовов и внутренние сообщения зависимостей."
+      required:
+        - status
+        - code
+        - message
+        - details
+      xml:
+        name: error
+      properties:
+        status:
+          type: integer
+          enum:
+            - 400
+            - 404
+            - 406
+            - 409
+            - 415
+            - 422
+            - 500
+            - 502
+            - 503
+            - 504
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type: array
+          xml:
+            name: details
+            wrapped: true
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      description: Причина ошибки конкретного поля. location указывает источник; field — имя поля, вложенный путь через точку или индекс с нуля (sort[1]). Для неразбираемого тела используется $. code стабилен для программной обработки; message объясняет нарушенное правило.
+      required:
+        - location
+        - field
+        - code
+        - message
+      xml:
+        name: detail
+      properties:
+        location:
+          type: string
+          enum:
+            - path
+            - query
+            - header
+            - body
+        field:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+  parameters:
+    OrganizationId:
+      name: id
+      in: path
+      required: true
+      description: ID организации
+      schema:
+        "$ref": "#/components/schemas/PositiveId"
+  responses:
+    HeadcountResult:
+      description: Количество сотрудников
+      content:
+        application/xml:
+          schema:
+            "$ref": "#/components/schemas/Headcount"
+    AcquisitionResult:
+      description: Результат поглощения
+      content:
+        application/xml:
+          schema:
+            "$ref": "#/components/schemas/Acquisition"
+    NotFound:
+      description: Организация, сотрудник или организация назначения не найдены. Корректный по формату, но неизвестный ID возвращает 404; неверный формат ID — 400.
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            missingOrganization:
+              $ref: "#/components/examples/missingOrganization"
+    Conflict:
+      description: Текущее состояние препятствует операции. При поглощении ранее выполненные переносы могут сохраниться.
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            nonemptyOrganization:
+              $ref: "#/components/examples/nonemptyOrganization"
+            employeeAlreadyAssigned:
+              $ref: "#/components/examples/employeeAlreadyAssigned"
+            selfAcquisition:
+              $ref: "#/components/examples/selfAcquisition"
+            concurrentChange:
+              $ref: "#/components/examples/concurrentChange"
+    BadGateway:
+      description: "Только менеджер: первый сервис вернул ответ, не соответствующий контракту (неразбираемый XML, неподдерживаемый Content-Type или отсутствующие обязательные поля). Валидный upstream 500 не становится 502; временная недоступность — 503, ожидание истекло — 504. Результат изменений может быть неизвестен или частичен."
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            invalidUpstreamResponse:
+              $ref: "#/components/examples/invalidUpstreamResponse"
+    GatewayTimeout:
+      description: "Только менеджер: первый сервис не ответил вовремя. Последнее изменение могло примениться, а поглощение — выполниться частично. Сверьте состояние через GET перед продолжением; изменения автоматически не повторяются."
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            upstreamTimeout:
+              $ref: "#/components/examples/upstreamTimeout"
+    NotAcceptable:
+      description: Accept не допускает application/xml. Тело ошибки описано в XML; если клиент исключил XML, сервер может вернуть 406 без тела.
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            unsupportedAccept:
+              $ref: "#/components/examples/unsupportedAccept"
+    InternalServerError:
+      description: Непредвиденная внутренняя ошибка. Внутренние сообщения и стеки не раскрываются. Для изменений результат может быть неизвестен, а поглощение может быть выполнено частично; сверяйте состояние перед продолжением.
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            internalError:
+              $ref: "#/components/examples/internalError"
+            integrationFailure:
+              $ref: "#/components/examples/integrationFailure"
+            upstreamInternalError:
+              $ref: "#/components/examples/upstreamInternalError"
+    ServiceUnavailable:
+      description: "Сервис временно не может обработать запрос: перегрузка, обслуживание или временная недоступность необходимой зависимости. Менеджер сохраняет upstream 503 как 503. Retry-After указывается только при известной задержке. Изменения могли примениться, а поглощение — выполниться частично; Retry-After не разрешает автоматически повторять изменения."
+      headers:
+        Retry-After:
+          description: Необязательная известная задержка в секундах до следующей попытки. Для изменений сначала сверяйте состояние; автоматический повтор не гарантированно безопасен.
+          schema:
+            type: integer
+            minimum: 0
+          example: 30
+      content:
+        application/xml:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            serviceUnavailable:
+              $ref: "#/components/examples/serviceUnavailable"
+            dependencyUnavailable:
+              $ref: "#/components/examples/dependencyUnavailable"
+  examples:
+    unknownQueryParameter:
+      summary: Неизвестный параметр запроса.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неизвестный параметр запроса.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>unexpected</field>
+              <code>UNKNOWN_FIELD</code>
+              <message>Параметр unexpected не поддерживается этим endpoint; удалите его.</message>
+            </detail>
+          </details>
+        </error>
+    invalid_id:
+      summary: Неверный параметр id.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неверный параметр id.</message>
+          <details>
+            <detail>
+              <location>path</location>
+              <field>id</field>
+              <code>INVALID_TYPE</code>
+              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
+            </detail>
+          </details>
+        </error>
+    invalid_employeeId:
+      summary: Неверный параметр employeeId.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неверный параметр employeeId.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>employeeId</field>
+              <code>INVALID_TYPE</code>
+              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
+            </detail>
+          </details>
+        </error>
+    missing_employeeId:
+      summary: Отсутствует обязательный параметр employeeId.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Отсутствует обязательный параметр employeeId.</message>
+          <details>
+            <detail>
+              <location>query</location>
+              <field>employeeId</field>
+              <code>REQUIRED</code>
+              <message>Передайте обязательный параметр employeeId.</message>
+            </detail>
+          </details>
+        </error>
+    unexpectedBody:
+      summary: Неожиданное тело запроса.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Операция не принимает тело запроса.</message>
+          <details>
+            <detail>
+              <location>body</location>
+              <field>$</field>
+              <code>UNEXPECTED_BODY</code>
+              <message>Удалите тело запроса; передавайте только объявленные параметры пути и query.</message>
+            </detail>
+          </details>
+        </error>
+    invalid_acquirer-id:
+      summary: Неверный параметр acquirer-id.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неверный параметр acquirer-id.</message>
+          <details>
+            <detail>
+              <location>path</location>
+              <field>acquirer-id</field>
+              <code>INVALID_TYPE</code>
+              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
+            </detail>
+          </details>
+        </error>
+    invalid_acquired-id:
+      summary: Неверный параметр acquired-id.
+      value: |
+        <error>
+          <status>400</status>
+          <code>INVALID_REQUEST</code>
+          <message>Неверный параметр acquired-id.</message>
+          <details>
+            <detail>
+              <location>path</location>
+              <field>acquired-id</field>
+              <code>INVALID_TYPE</code>
+              <message>Значение должно быть десятичным целым int64 от 1 до 9223372036854775807; abc не является ID.</message>
+            </detail>
+          </details>
+        </error>
+    missingOrganization:
+      summary: Организация с указанным ID не найдена.
+      value: |
+        <error>
+          <status>404</status>
+          <code>NOT_FOUND</code>
+          <message>Организация с указанным ID не найдена.</message>
+          <details/>
+        </error>
+    nonemptyOrganization:
+      summary: Нельзя удалить организацию, пока в ней есть сотрудники.
+      value: |
+        <error>
+          <status>409</status>
+          <code>ORGANIZATION_NOT_EMPTY</code>
+          <message>Нельзя удалить организацию, пока в ней есть сотрудники.</message>
+          <details/>
+        </error>
+    employeeAlreadyAssigned:
+      summary: Сотрудник уже принадлежит другой организации.
+      value: |
+        <error>
+          <status>409</status>
+          <code>EMPLOYEE_ALREADY_ASSIGNED</code>
+          <message>Сотрудник уже принадлежит другой организации.</message>
+          <details/>
+        </error>
+    selfAcquisition:
+      summary: Поглощающая и поглощаемая организации должны различаться.
+      value: |
+        <error>
+          <status>409</status>
+          <code>SELF_ACQUISITION</code>
+          <message>Поглощающая и поглощаемая организации должны различаться.</message>
+          <details/>
+        </error>
+    concurrentChange:
+      summary: Принадлежность сотрудника изменилась во время поглощения; требуется сверка состояния.
+      value: |
+        <error>
+          <status>409</status>
+          <code>CONCURRENT_MODIFICATION</code>
+          <message>Принадлежность сотрудника изменилась во время поглощения; требуется сверка состояния.</message>
+          <details/>
+        </error>
+    invalidUpstreamResponse:
+      summary: Ответ первого сервиса не соответствует ожидаемому контракту; проверьте состояние перед повтором изменения.
+      value: |
+        <error>
+          <status>502</status>
+          <code>INVALID_UPSTREAM_RESPONSE</code>
+          <message>Ответ первого сервиса не соответствует ожидаемому контракту; проверьте состояние перед повтором изменения.</message>
+          <details/>
+        </error>
+    upstreamTimeout:
+      summary: Истекло время ожидания первого сервиса; результат последнего изменения неизвестен.
+      value: |
+        <error>
+          <status>504</status>
+          <code>UPSTREAM_TIMEOUT</code>
+          <message>Истекло время ожидания первого сервиса; результат последнего изменения неизвестен.</message>
+          <details/>
+        </error>
+    unsupportedAccept:
+      summary: Доступный формат ответа — application/xml.
+      value: |
+        <error>
+          <status>406</status>
+          <code>NOT_ACCEPTABLE</code>
+          <message>Доступный формат ответа — application/xml.</message>
+          <details>
+            <detail>
+              <location>header</location>
+              <field>Accept</field>
+              <code>UNSUPPORTED_MEDIA_TYPE</code>
+              <message>Укажите application/xml или совместимый wildcard в Accept.</message>
+            </detail>
+          </details>
+        </error>
+    internalError:
+      summary: Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние.
+      value: |
+        <error>
+          <status>500</status>
+          <code>INTERNAL_ERROR</code>
+          <message>Сервис не смог завершить обработку запроса; при изменении данных проверьте текущее состояние.</message>
+          <details/>
+        </error>
+    integrationFailure:
+      summary: Менеджер сформировал запрос, не соответствующий контракту первого сервиса.
+      value: |
+        <error>
+          <status>500</status>
+          <code>INTEGRATION_FAILURE</code>
+          <message>Менеджер сформировал запрос, не соответствующий контракту первого сервиса.</message>
+          <details/>
+        </error>
+    upstreamInternalError:
+      summary: Первый сервис сообщил внутреннюю ошибку; при изменении данных проверьте текущее состояние.
+      value: |
+        <error>
+          <status>500</status>
+          <code>UPSTREAM_INTERNAL_ERROR</code>
+          <message>Первый сервис сообщил внутреннюю ошибку; при изменении данных проверьте текущее состояние.</message>
+          <details/>
+        </error>
+    serviceUnavailable:
+      summary: Сервис временно недоступен; повторите чтение позже.
+      value: |
+        <error>
+          <status>503</status>
+          <code>SERVICE_UNAVAILABLE</code>
+          <message>Сервис временно недоступен; повторите чтение позже.</message>
+          <details/>
+        </error>
+    dependencyUnavailable:
+      summary: Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние.
+      value: |
+        <error>
+          <status>503</status>
+          <code>DEPENDENCY_UNAVAILABLE</code>
+          <message>Необходимая зависимость временно недоступна; перед повтором изменения проверьте состояние.</message>
+          <details/>
+        </error>
